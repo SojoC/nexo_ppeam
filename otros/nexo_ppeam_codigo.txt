@@ -1,0 +1,225 @@
+db_firestore = get_db().collection(COLLECTION)
+def create_contact(nombre: str, circuito: str, telefono: str) -> Dict[str, Any]:
+def get_db():
+def get_settings() -> Setting:
+
+# Estructura y código principal de Nexo_PPEAM (actualizado)
+
+## Estructura de carpetas
+
+```
+Nexo_PPEAM/
+├── .venv/
+├── .vscode/
+├── backend/
+│   ├── __init__.py
+│   ├── app.py
+│   ├── chat.py
+│   ├── config/
+│   │   ├── __init__.py
+│   │   ├── firebase_config.py
+│   │   └── migracion/
+│   │       └── access_a_csv.py
+│   ├── messaging.py
+│   ├── models/ (vacío)
+│   ├── requirements.txt
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   └── contacts_firebase.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── contact_service.py
+│   │   └── contact_service_firestore.py
+│   └── user.py
+├── base-de-datos-02-8b402-firebase-adminsdk-nvtge-ef258cb69b.json
+├── Circuito1.accdb
+├── datos_circuitos.json
+├── frontend/
+│   ├── assets/ (vacío)
+│   ├── chat_window.py
+│   ├── main.py
+│   ├── requirements.txt
+│   ├── style.css
+│   └── ui/ (vacío)
+├── README.md
+├── docker-compose.yml
+└── .env
+```
+
+## docker-compose.yml
+```
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      FIREBASE_CREDENTIALS: /keys/firebaseKey.json
+    volumes:
+      - ./keys/firebaseKey.json:/keys/firebaseKey.json:ro
+```
+
+## .env
+```
+#base de datos 2
+FIREBASE_CREDENTIALS=C:\Nexo_PPEAM\base-de-datos-02-8b402-firebase-adminsdk-nvtge-ef258cb69b.json
+FIREBASE_DATABASE_URL=https://your-database-name.firebaseio.com
+SECRET_KEY=sjmgrc-mtrmngs
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+ALLWED_ORIGINS=https://localhost:5173,https://localhost:3000
+```
+
+## backend/app.py
+```
+from fastapi import FastAPI
+from backend.routes.contacts_firebase import router as contacts_router
+
+app = FastAPI(title="Nexo_PPEAM API (Firebase + FastAPI)")
+
+app.include_router(contacts_router)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+```
+
+
+## backend/models/contact.py (adaptado a Firebase)
+```
+class ContactIn(BaseModel):
+  Nombre: str
+  Circuito: str
+  Telefono: str
+  Congregacion: Optional[str] = None
+  fecha_de_nacimiento: Optional[str] = None
+  fecha_de_bautismo: Optional[str] = None
+  privilegio: Optional[str] = None
+  direccion_de_habitacion: Optional[str] = None
+  id_externo: Optional[str | int] = None
+
+class ContactOut(ContactIn):
+  id: str
+
+class ContactUpdate(BaseModel):
+  Nombre: Optional[str] = None
+  Circuito: Optional[str] = None
+  Telefono: Optional[str] = None
+  Congregacion: Optional[str] = None
+  fecha_de_nacimiento: Optional[str] = None
+  fecha_de_bautismo: Optional[str] = None
+  privilegio: Optional[str] = None
+  direccion_de_habitacion: Optional[str] = None
+  id_externo: Optional[str] = None
+```
+
+## backend/services/contact_service.py (fragmento)
+```
+def crear_contacto(Circuito, Congregacion, Direccion_de_habitacion, Id, Nombre, Telefono, Fecha_de_nacimiento, Fecha_de_bautismo)-> dict:
+    doc_ref = db_firestore.collection('Congregacion').document()
+    data = {
+        'circuito': Circuito,
+        'congregacion': Congregacion,
+        'direccion_de_habitacion': Direccion_de_habitacion,
+        'id': Id,
+        'nombre': Nombre,
+        'telefono': Telefono,
+        'fecha_de_nacimiento': Fecha_de_nacimiento,
+        'fecha_de_bautismo': Fecha_de_bautismo
+    }
+    doc_ref.set(data)
+    return {'id': doc_ref.id, **data}
+```
+
+## backend/services/contact_service_firestore.py (fragmento)
+```
+def create_contact(nombre: str, circuito: str, telefono: str) -> Dict[str, Any]:
+    doc_ref = db_firestore.document()
+    data = {"nombre": nombre, "circuito": circuito, "telefono": telefono}
+    doc_ref.set(data)
+    return {"id": doc_ref.id, **data}
+```
+
+## backend/config/firebase_config.py (fragmento)
+```
+def get_db():
+    try:
+        if not firebase_admin._apps:
+            settings = get_settings()
+            key_path = os.path.join(os.getcwd(), settings.FIREBASE_CREDENTIALS)
+            cred = credentials.Certificate(key_path)
+            firebase_admin.initialize_app(cred)
+        return firestore.client()
+    except Exception as e:
+        print(f"Error initializing Firebase: {e}")
+        raise
+```
+
+## backend/config/config.py (fragmento)
+```
+class Setting:
+    def __init__(self) -> None:
+        self.FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS", "datos_circuitos.json")
+        self.SECRET_KEY = os.getenv("SECRET_KEY", "sjmgrc-mtrmngs")
+        self.ALGORITHM = os.getenv("ALGORITHM", "HS256")
+        self.ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60)
+        raw = os.getenv("ALLWED_ORIGINS", "https://localhost:5173,https://localhost:3000")
+        self.ALLWED_ORIGINS = [o.strip() for o in raw.split(",")] if raw != "*" else ["*"]
+```
+
+## backend/requirements.txt
+```
+firebase-admin
+pyodbc
+pandas
+```
+
+## frontend/requirements.txt
+```
+pyodbc
+```
+
+---
+
+
+# Prompt de uso del programa Nexo_PPEAM
+
+1. Instala dependencias:
+  ```
+  pip install -r backend/requirements.txt
+  pip install -r frontend/requirements.txt
+  ```
+2. Configura el archivo `.env` con tus credenciales y parámetros de Firebase y seguridad.
+3. Inicia el backend:
+  ```
+  uvicorn backend.app:app --reload
+  ```
+4. Accede a la documentación interactiva de la API en:
+  - http://localhost:8000/docs
+  - http://localhost:8000/redoc
+5. Usa los endpoints para:
+  - Crear contactos (POST /api/contacts/)
+  - Listar contactos (GET /api/contacts/)
+  - Leer contacto por ID (GET /api/contacts/{contact_id})
+  - Actualizar contacto (PATCH /api/contacts/{contact_id})
+  - Eliminar contacto (DELETE /api/contacts/{contact_id})
+
+
+Ejemplo de JSON para crear un contacto (adaptado a Firebase):
+```json
+{
+  "nombre": "Juan Pérez",
+  "circuito": "Monagas 3",
+  "telefono": "04141234567",
+  "congregacion": "Sarrapial",
+  "fechaNacimiento": "1990-01-01",
+  "fechaBautismo": "2010-01-01",
+  "privilegio": "Anciano"
+}
+```
+
+---
+
+# NOTA: No se incluye la carpeta tutorial ni sus archivos.

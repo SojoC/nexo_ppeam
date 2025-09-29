@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+pydantic==2.*
+python-dotenv
+firebase-admin>=6.4.0
+google-cloud-firestore>=2.16.0
+

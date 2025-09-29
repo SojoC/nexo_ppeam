@@ -1,0 +1,19 @@
+backend/
+├── app.py
+├── requirements.txt
+├── config/
+│   ├── __init__.py
+│   ├── settings.py
+│   └── firebase.py
+├── models/
+│   ├── __init__.py
+│   ├── contact.py
+│   └── message.py
+├── repository/
+│   ├── __init__.py
+│   ├── contacts_repository.py
+│   └── messages_repository.py
+└── routes/
+    ├── __init__.py
+    ├── contacts_firebase.py
+    └── messages.py

@@ -1,0 +1,20 @@
+# Estructura actualizada de backend (Nexo_PPEAM)
+
+backend/
+├── app.py
+├── requirements.txt
+├── config/
+│   ├── __init__.py
+│   ├── settings.py
+│   └── firebase.py
+│   └── migracion/
+│       └── access_a_csv.py
+├── models/
+│   ├── __init__.py
+│   └── contact.py
+├── repository/
+│   ├── __init__.py
+│   └── contacts_repository.py
+├── routes/
+│   ├── __init__.py
+│   └── contacts.py
