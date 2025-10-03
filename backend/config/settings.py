@@ -25,7 +25,7 @@ def get_settings() -> Settings:
         load_dotenv(override=False)
     except Exception:
         pass
-
+    #para el cros    
     raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000")
     origins = [o.strip() for o in raw_origins.split(",")] if raw_origins != "*" else ["*"]
 

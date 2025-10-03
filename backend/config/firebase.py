@@ -4,7 +4,7 @@ from firebase_admin import credentials, firestore
 from .settings import get_settings
 
 _db = None
-
+#Convierte la ruta del archivo de credenciales en una ruta absoluta, asegurando que siempre se encuentre el archivo correcto.
 def _resolve_key_path(raw: str) -> str:
     p = pathlib.Path(raw)
     return str(p if p.is_absolute() else (pathlib.Path(os.getcwd()) / raw).resolve())

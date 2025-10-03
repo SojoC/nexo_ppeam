@@ -11,4 +11,4 @@ async def ws_contact(websocket: WebSocket, contact_id: str):
             # Si el cliente envía algo (p.ej. ACK/lectura), lo recibimos aquí
             _ = await websocket.receive_text()
     except WebSocketDisconnect:
-        manager.disconnect(contact_id, websocket)
+         await manager.disconnect(contact_id, websocket)
