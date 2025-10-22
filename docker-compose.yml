@@ -1,39 +1,45 @@
+# docker-compose.yml (actualizado)
+
+name: nexo_ppeam
+
 services:
   api:
     build:
       context: ./backend
+      dockerfile: Dockerfile
+    command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
     working_dir: /app
-    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    ports:
-      - "8000:8000"
-    env_file:
-      - ./.env
     environment:
       FIREBASE_CREDENTIALS: /keys/firebaseKey.json
+      # Orígenes permitidos (ajusta si usas otro puerto/host)
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8000:8000"
     volumes:
       - ./keys/firebaseKey.json:/keys/firebaseKey.json:ro
-      - ./backend:/app
-    restart: unless-stopped
+      - ./:/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
-    ports:
-      - "3000:80"   # o "5173:80" si prefieres
+      dockerfile: Dockerfile
     depends_on:
       api:
         condition: service_healthy
+        required: true
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
-    # Si tu healthcheck usa wget, Nginx Alpine sí lo trae. Puedes dejarlo o quitarlo.
-    # healthcheck:
-    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 20s

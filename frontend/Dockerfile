@@ -1,29 +1,19 @@
 # frontend/Dockerfile
-# Etapa 1: Construcción del proyecto (build)
-FROM node:20-alpine AS build
-
-# Carpeta de trabajo dentro del contenedor
+# Etapa 1: Build con Node (Debian, glibc)
+FROM node:20-bullseye-slim AS build
 WORKDIR /app
 
-# Copiar archivos necesarios
+# Instalar TODAS las deps (incluye devDependencies para Vite/TS/Rolldown)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
-# Copiar el resto del código y compilar
+# Copiar código y compilar
 COPY . .
 RUN npm run build
 
-# Etapa 2: Servidor liviano para archivos estáticos
+# Etapa 2: Servir con Nginx
 FROM nginx:stable-alpine
-
-# Elimina configuración por defecto y copia la tuya
 RUN rm -rf /usr/share/nginx/html/*
-
-# Copia el resultado del build a la carpeta pública de nginx
 COPY --from=build /app/dist /usr/share/nginx/html
-
-# Expone el puerto 80
 EXPOSE 80
-
-# Comando por defecto
 CMD ["nginx", "-g", "daemon off;"]
