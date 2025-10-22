@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Dict, Any
-from backend.models.message import (
+from models.message import (
     MessageIn, MessageOut, MessageStatusUpdate, MessagePatch,
     MessageBroadcastIn, MessageBroadcastOut
 )
-from backend.repository.messages_repository import (
+from repository.messages_repository import (
     create_message, list_messages, get_message, update_message, delete_message, bulk_create_messages
 )
-from backend.repository.contacts_repository import find_contact_ids_by_filters
+from repository.contacts_repository import find_contact_ids_by_filters
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 
@@ -68,7 +68,7 @@ def broadcast_messages(body: MessageBroadcastIn):
 
     if body.dry_run:
         return MessageBroadcastOut(
-            campaign_id=body.campaign_id,
+            campaign_id=body.campaign_id or "",
             coordinator_id=body.coordinator_id,
             count=len(recipients),
             message_ids=[]

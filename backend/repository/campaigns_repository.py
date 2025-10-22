@@ -2,7 +2,7 @@ import logging
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timezone
 from firebase_admin import firestore
-from backend.config.firebase import get_campaigns_collection_ref, get_db
+from config.firebase import get_campaigns_collection_ref, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ def rsvp_campaign(campaign_id: str, contact_id: str, response: str) -> Dict[str,
                 "at": datetime.now(timezone.utc).isoformat()
             }, merge=True)
             new_count = accepted_count + 1
-            update_doc = {"accepted_count": new_count}
+            update_doc: Dict[str, Any] = {"accepted_count": new_count}
             if new_count >= capacity:
                 update_doc["status"] = "closed"
             transaction.update(camp_ref, update_doc)

@@ -2,17 +2,17 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel  # <-- IMPORT NECESARIO
 from typing import Dict, Any, Optional, List
 
-from backend.models.campaign import (
+from models.campaign import (
     CampaignIn, CampaignOut, CampaignListOut, RSVPIn, RSVPOut
 )
-from backend.repository.campaigns_repository import (
+from repository.campaigns_repository import (
     create_campaign, get_campaign, list_campaigns, rsvp_campaign
 )
-from backend.repository.messages_repository import bulk_create_messages
-from backend.repository.contacts_repository import (
+from repository.messages_repository import bulk_create_messages
+from repository.contacts_repository import (
     find_contact_ids_by_filters, get_contact
 )
-from backend.realtime.ws import manager  # para avisar en tiempo real
+from realtime.ws import manager  # para avisar en tiempo real
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 

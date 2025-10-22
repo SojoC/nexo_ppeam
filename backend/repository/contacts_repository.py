@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, List, Optional, Tuple
-from backend.config.firebase import get_collection_ref
-from backend.config.settings import get_field_map
+from config.firebase import get_collection_ref
+from config.settings import get_field_map
 
 logger = logging.getLogger(__name__)
 

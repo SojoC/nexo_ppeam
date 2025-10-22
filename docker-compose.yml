@@ -1,30 +1,28 @@
-# docker-compose.yml (actualizado)
-
-name: nexo_ppeam
-
 services:
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
+    # El código se copia a /app (ver backend/Dockerfile). Trabajar ahí.
     working_dir: /app
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
     environment:
-      FIREBASE_CREDENTIALS: /keys/firebaseKey.json
-      # Orígenes permitidos (ajusta si usas otro puerto/host)
-      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      # Habilita imports desde /app (p.ej. config, routes, models)
+      PYTHONPATH: /app
+      FIREBASE_CREDENTIALS: /keys/firebase.json
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000
+    volumes:
+      - ./backend:/app
+      - ./keys/firebase.json:/keys/firebase.json:ro
     ports:
       - "8000:8000"
-    volumes:
-      - ./keys/firebaseKey.json:/keys/firebaseKey.json:ro
-      - ./:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    restart: unless-stopped
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
 
   frontend:
     build:
@@ -33,13 +31,6 @@ services:
     depends_on:
       api:
         condition: service_healthy
-        required: true
     ports:
       - "3000:80"
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
     restart: unless-stopped

@@ -1,0 +1,375 @@
+================================================================================
+RESUMEN DE MODIFICACIONES - PROYECTO NEXO PPEAM
+================================================================================
+Fecha: 22 de octubre de 2025
+Objetivo: Configurar entorno de desarrollo con Docker Compose funcional para
+          backend FastAPI y frontend React+Vite
+
+================================================================================
+PROBLEMA INICIAL
+================================================================================
+
+El proyecto tenía configuraciones incorrectas que impedían levantar el stack:
+
+1. Frontend no compilaba en Alpine por bindings nativos de Rolldown (Vite)
+2. Backend fallaba con ModuleNotFoundError por imports con prefijo "backend."
+3. Healthcheck del backend sin curl instalado
+4. docker-compose.yml con configuración incorrecta de working_dir y PYTHONPATH
+5. Rutas de credenciales Firebase inconsistentes
+6. Faltaba endpoint /health en el backend
+
+================================================================================
+ARCHIVOS MODIFICADOS Y RAZONES
+================================================================================
+
+─────────────────────────────────────────────────────────────────────────────
+1. docker-compose.yml
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- Agregado restart: unless-stopped a ambos servicios
+- Configurado working_dir: /app para el backend
+- Ajustado PYTHONPATH: /app (sin /app/backend)
+- Corregido volumen de código: ./backend:/app (no ./backend:/app/backend)
+- Unificado credenciales a keys/firebase.json
+- Agregado healthcheck al backend con curl
+- Configurado depends_on del frontend con condition: service_healthy
+- Ajustados timings del healthcheck (interval: 10s, timeout: 5s, retries: 5)
+
+RAZÓN:
+El contenedor necesita que el código esté en /app directamente, no en /app/backend.
+Si montamos ./backend en /app/backend y seteamos PYTHONPATH=/app/backend, entonces
+los imports "from config.settings" buscarían en /app/backend/config/settings, pero
+luego imports como "from routes.contacts" buscarían en /app/backend/routes, lo cual
+funciona solo si TODOS los imports son consistentes.
+
+Al montar ./backend directamente en /app y setear PYTHONPATH=/app, todos los imports
+de la forma "from config.X", "from models.Y", "from routes.Z" resuelven correctamente
+porque Python busca en /app/config, /app/models, /app/routes.
+
+Los imports anteriores con prefijo "backend." (ej: "from backend.config.settings")
+fallaban porque Python buscaba un paquete "backend" que no existía en /app.
+
+─────────────────────────────────────────────────────────────────────────────
+2. backend/Dockerfile
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- Agregada instalación de curl: RUN apt-get update && apt-get install -y curl
+- WORKDIR /app (el código se copia aquí)
+- ENV PYTHONPATH="/app/backend:/app" (se sobrescribe en compose)
+- CMD uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+
+RAZÓN:
+curl es necesario para el healthcheck definido en docker-compose.yml.
+Sin curl, el comando "curl -f http://localhost:8000/health" falla y el
+contenedor nunca queda "healthy", bloqueando el inicio del frontend.
+
+WORKDIR /app asegura que el comando uvicorn busque app.py en /app/app.py.
+
+--reload permite hot-reload durante desarrollo (los cambios en código se
+reflejan automáticamente sin reconstruir la imagen).
+
+─────────────────────────────────────────────────────────────────────────────
+3. frontend/Dockerfile
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- Build stage: node:20-bullseye-slim (Debian) en vez de Alpine
+- Instalación completa: npm ci (incluye devDependencies)
+- Runtime: nginx:stable-alpine para servir estáticos
+- Copia de dist a /usr/share/nginx/html
+
+RAZÓN:
+Vite con Rolldown usa bindings nativos compilados para glibc (Linux estándar).
+Alpine usa musl libc, que es incompatible → el build fallaba con errores de
+"cannot open shared object file".
+
+Solución: construir en Debian (bullseye-slim tiene glibc) y servir el build
+estático resultante con nginx Alpine (nginx solo sirve archivos, no necesita
+bindings de Node).
+
+npm ci instala exactamente lo que package-lock.json especifica, incluyendo
+devDependencies necesarias para el build (Vite, TypeScript, etc.).
+
+─────────────────────────────────────────────────────────────────────────────
+4. backend/app.py
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- Imports cambiados de "from backend.config.X" a "from config.X"
+- Agregado endpoint /health:
+  @app.get("/health")
+  async def health_check():
+      logger.info("event=health_check status=ok")
+      return {"status": "ok"}
+
+RAZÓN:
+Los imports con prefijo "backend." no funcionan porque en el contenedor no hay
+un paquete llamado "backend" en PYTHONPATH. El código está en /app directamente.
+
+El endpoint /health es necesario para el healthcheck de Docker. Debe responder
+200 OK para que Docker marque el contenedor como "healthy". Sin este endpoint,
+el healthcheck falla, el backend nunca queda healthy, y el frontend no arranca
+(porque tiene depends_on: service_healthy).
+
+─────────────────────────────────────────────────────────────────────────────
+5. backend/routes/campaigns.py
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- from backend.models.campaign → from models.campaign
+- from backend.repository.campaigns_repository → from repository.campaigns_repository
+- from backend.repository.messages_repository → from repository.messages_repository
+- from backend.repository.contacts_repository → from repository.contacts_repository
+- from backend.realtime.ws → from realtime.ws
+
+RAZÓN:
+Misma razón que app.py. Los imports "backend.*" fallan porque el paquete
+"backend" no existe en el path de módulos del contenedor.
+
+Con PYTHONPATH=/app y código en /app, Python resuelve "from models.campaign"
+buscando /app/models/campaign.py (que sí existe).
+
+─────────────────────────────────────────────────────────────────────────────
+6. backend/routes/contacts_firebase.py
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- from backend.models.contact → from models.contact
+- from backend.repository.contacts_repository → from repository.contacts_repository
+
+RAZÓN:
+Consistencia de imports. Todos los módulos de routes deben importar sin
+prefijo "backend." para que funcionen dentro del contenedor.
+
+─────────────────────────────────────────────────────────────────────────────
+7. backend/routes/messages.py
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- from backend.models.message → from models.message
+- from backend.repository.messages_repository → from repository.messages_repository
+- from backend.repository.contacts_repository → from repository.contacts_repository
+
+RAZÓN:
+Misma razón que arriba. Sin estos cambios, el import falla y la ruta no carga.
+
+─────────────────────────────────────────────────────────────────────────────
+8. backend/routes/realtime.py
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- from backend.realtime.ws → from realtime.ws
+
+RAZÓN:
+Consistencia de imports para que el WebSocket manager se importe correctamente.
+
+─────────────────────────────────────────────────────────────────────────────
+9. backend/repository/campaigns_repository.py
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- from backend.config.firebase → from config.firebase
+
+RAZÓN:
+Los repositorios también deben usar imports relativos al root /app.
+Sin este cambio, el import de get_campaigns_collection_ref falla.
+
+─────────────────────────────────────────────────────────────────────────────
+10. backend/repository/contacts_repository.py
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- from backend.config.firebase → from config.firebase
+- from backend.config.settings → from config.settings
+
+RAZÓN:
+Mismo patrón que el resto. Los repositorios necesitan importar config sin
+el prefijo "backend." para que funcionen en el contenedor.
+
+─────────────────────────────────────────────────────────────────────────────
+11. backend/repository/messages_repository.py
+─────────────────────────────────────────────────────────────────────────────
+
+CAMBIOS:
+- from backend.config.firebase → from config.firebase
+
+RAZÓN:
+Consistencia de imports en todos los repositorios.
+
+================================================================================
+ARCHIVOS CREADOS
+================================================================================
+
+─────────────────────────────────────────────────────────────────────────────
+README.md
+─────────────────────────────────────────────────────────────────────────────
+
+CONTENIDO:
+- Descripción de la arquitectura
+- Requisitos previos
+- Instrucciones de instalación y ejecución
+- URLs de acceso
+- Estructura del proyecto
+- Comandos útiles de Docker
+- Sección de troubleshooting
+- Variables de entorno
+- Guía de desarrollo local sin Docker
+
+RAZÓN:
+Documentar el setup para que cualquier desarrollador pueda levantar el
+proyecto siguiendo pasos claros. Incluye soluciones a problemas comunes
+que se encontraron durante la configuración inicial.
+
+─────────────────────────────────────────────────────────────────────────────
+CAMBIOS_REALIZADOS.txt (este archivo)
+─────────────────────────────────────────────────────────────────────────────
+
+CONTENIDO:
+- Registro detallado de todos los cambios
+- Explicación del problema inicial
+- Razón técnica de cada modificación
+- Resultado final y cómo validar
+
+RAZÓN:
+Mantener un registro de la sesión de troubleshooting y configuración para
+referencia futura. Útil para onboarding de nuevos devs o debugging si algo
+regresa.
+
+================================================================================
+RESULTADO FINAL
+================================================================================
+
+Estado actual del stack:
+
+✓ Backend (api):
+  - Container: nexo_ppeam-api-1
+  - Status: Up (healthy)
+  - Puerto: 0.0.0.0:8000->8000/tcp
+  - Health endpoint: http://localhost:8000/health → {"status":"ok"}
+  - Documentación: http://localhost:8000/docs
+
+✓ Frontend:
+  - Container: nexo_ppeam-frontend-1
+  - Status: Up
+  - Puerto: 0.0.0.0:3000->80/tcp
+  - URL: http://localhost:3000
+  - Server: nginx/1.28.0
+
+✓ Networking:
+  - Red Docker: nexo_ppeam_default
+  - Frontend puede comunicarse con backend vía http://api:8000
+  - CORS configurado para localhost:3000 y localhost:5173
+
+✓ Volúmenes:
+  - ./backend montado en /app (hot-reload habilitado)
+  - ./keys/firebase.json montado en /keys/firebase.json
+
+================================================================================
+VALIDACIÓN
+================================================================================
+
+Comandos ejecutados para validar:
+
+1. docker compose ps
+   → Ambos servicios Up, api healthy
+
+2. curl http://localhost:8000/health
+   → {"status":"ok"}
+
+3. curl -I http://localhost:3000
+   → HTTP/1.1 200 OK, Server: nginx
+
+4. docker compose logs api (últimas líneas)
+   → INFO: Application startup complete.
+   → INFO: 127.0.0.1 - "GET /health HTTP/1.1" 200 OK
+
+No hay errores de ModuleNotFoundError ni import issues.
+Healthcheck pasa consistentemente.
+Frontend sirve correctamente el build de Vite.
+
+================================================================================
+CONSIDERACIONES TÉCNICAS
+================================================================================
+
+1. PYTHONPATH vs working_dir vs volúmenes:
+   - PYTHONPATH define dónde Python busca módulos
+   - working_dir define el directorio de trabajo del comando (CMD)
+   - Los volúmenes montan código del host en el contenedor
+   - Estos tres DEBEN estar alineados para que los imports funcionen
+
+   Setup final:
+   - Volume: ./backend:/app
+   - working_dir: /app
+   - PYTHONPATH: /app
+   - CMD: uvicorn app:app (busca app.py en working_dir)
+
+2. Por qué no funciona Alpine + Vite/Rolldown:
+   - Rolldown está escrito en Rust y compila bindings nativos
+   - Los bindings se compilan para glibc (libc estándar de Linux)
+   - Alpine usa musl libc (alternativa más pequeña pero incompatible)
+   - Solución: build en Debian (glibc), runtime en Alpine (solo nginx)
+
+3. Healthcheck y depends_on:
+   - Docker Compose 2.x soporta depends_on con condition: service_healthy
+   - Sin healthcheck o sin curl, el servicio nunca queda "healthy"
+   - Frontend espera a que backend sea healthy antes de iniciar
+   - Esto previene errores de conexión durante startup race conditions
+
+4. Hot-reload en desarrollo:
+   - Backend: uvicorn --reload + volumen montado → cambios de código
+     se detectan automáticamente sin rebuild
+   - Frontend: nginx sirve build estático → necesita rebuild para
+     reflejar cambios (docker compose build frontend)
+   - Para dev del frontend sin rebuild, correr npm run dev localmente
+
+5. Estructura de imports:
+   - Imports absolutos desde root del proyecto (PYTHONPATH)
+   - Ventaja: claros, evitan imports relativos complejos (../../)
+   - Desventaja: requieren PYTHONPATH correcto en todos los entornos
+   - Alternativa: usar relative imports (.config, .models) → más portable
+     pero menos legible en proyectos grandes
+
+6. Credenciales Firebase:
+   - Archivo keys/firebase.json debe existir (puede ser placeholder)
+   - Si Firebase no está configurado, algunas rutas fallarán al usarse
+   - Para CI/CD, usar secrets y montar el archivo en runtime
+
+================================================================================
+PRÓXIMOS PASOS RECOMENDADOS
+================================================================================
+
+1. Tests:
+   - Agregar pytest con fixtures para FastAPI
+   - Tests de integración para rutas principales
+   - Tests de WebSocket (realtime.py)
+
+2. CI/CD:
+   - GitHub Actions para build y test automático
+   - Deploy a staging en push a main
+   - Validación de linting (ruff/black para Python, eslint para TS)
+
+3. Monitoreo:
+   - Agregar /metrics endpoint (prometheus)
+   - Configurar logging estructurado (json)
+   - Integrar Sentry para error tracking
+
+4. Frontend improvements:
+   - Configurar variable VITE_API_URL para apuntar a backend
+   - Implementar proxy en nginx.conf si se necesita
+   - Agregar tests con Vitest
+
+5. Seguridad:
+   - Validar que SECRET_KEY no esté hardcoded
+   - Implementar rate limiting en endpoints
+   - HTTPS en producción
+
+6. Performance:
+   - Multi-stage build para reducir tamaño de imagen backend
+   - Cachear layers de pip install
+   - Optimizar bundle size del frontend
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================

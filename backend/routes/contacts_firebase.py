@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Dict, Any
-from backend.models.contact import ContactIn, ContactOut, ContactUpdate
-from backend.repository.contacts_repository import (
+from models.contact import ContactIn, ContactOut, ContactUpdate
+from repository.contacts_repository import (
     create_contact, get_contact, list_contacts, update_contact, delete_contact
 )
 

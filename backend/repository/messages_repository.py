@@ -2,7 +2,7 @@ import logging                                        # Logging estructurado (au
 from typing import Any, Dict, List, Optional, Tuple   # Tipos para anotar entradas/salidas
 from datetime import datetime, timezone               # Timestamps en UTC (ISO)
 from uuid import uuid4                                # Para generar campaign_id si no viene
-from backend.config.firebase import get_messages_collection_ref, get_db
+from config.firebase import get_messages_collection_ref, get_db
 # ^ get_messages_collection_ref(): atajo a la colección 'messages'
 # ^ get_db(): devuelve el cliente Firestore (para batch/transactions)
 
