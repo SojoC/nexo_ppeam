@@ -1,10 +1,9 @@
-version: '3.8'
 services:
   api:
-    restart: unless-stopped
     build:
       context: ./backend
-    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    working_dir: /app
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
       - "8000:8000"
     env_file:
@@ -14,8 +13,27 @@ services:
     volumes:
       - ./keys/firebaseKey.json:/keys/firebaseKey.json:ro
       - ./backend:/app
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80"   # o "5173:80" si prefieres
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    # Si tu healthcheck usa wget, Nginx Alpine sí lo trae. Puedes dejarlo o quitarlo.
+    # healthcheck:
+    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 20s
