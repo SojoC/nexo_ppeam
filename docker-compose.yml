@@ -1,5 +1,7 @@
+version: '3.8'
 services:
   api:
+    restart: unless-stopped
     build:
       context: ./backend
     command: uvicorn app:app --host 0.0.0.0 --port 8000
@@ -12,3 +14,8 @@ services:
     volumes:
       - ./keys/firebaseKey.json:/keys/firebaseKey.json:ro
       - ./backend:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
