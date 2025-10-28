@@ -1,0 +1,13 @@
+cd C:\Nexo_PPAM\nexo_ppeam
+# Verifica que el FROM sea bullseye-slim
+Select-String -Pattern "^FROM " .\frontend\Dockerfile
+
+docker compose down -v
+docker builder prune -af
+docker compose build --no-cache frontend
+docker compose up -d
+docker compose ps
+
+# Logs por si algo falla
+docker compose logs --no-log-prefix --tail=100 frontend
+docker compose logs --no-log-prefix --tail=100 api

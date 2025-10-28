@@ -6,6 +6,8 @@ from routes.contacts_firebase import router as contacts_router
 from routes.messages import router as messages_router
 from routes.campaigns import router as campaigns_router
 from routes.realtime import router as realtime_router
+from routes.auth_temp import router as auth_router
+from routes.users_temp import router as users_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,11 +26,12 @@ if isinstance(origins, str):
 
 app = FastAPI(title="Nexo_PPEAM API (Firebase + FastAPI)")
 
+# CORS configuración explícita para desarrollo
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "*"],  # Explícito para desarrollo
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -41,4 +44,6 @@ app.include_router(contacts_router)
 app.include_router(messages_router)
 app.include_router(campaigns_router)
 app.include_router(realtime_router)
+app.include_router(auth_router)
+app.include_router(users_router)
 
