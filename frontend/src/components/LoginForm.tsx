@@ -58,7 +58,7 @@ export function LoginForm({ onSuccess, className = '' }: LoginFormProps) {
     }
 
     try {
-      await login(formData);
+      await login();
       onSuccess?.();
     } catch (error) {
       setErrors({
@@ -68,15 +68,7 @@ export function LoginForm({ onSuccess, className = '' }: LoginFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className={`space-y-6 ${className}`}>
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-slate-200 mb-2">
-          Iniciar Sesión
-        </h2>
-        <p className="text-slate-400">
-          Ingresa a tu cuenta
-        </p>
-      </div>
+    <form onSubmit={handleSubmit} className={`space-y-5 ${className}`}>
 
       {errors.submit && (
         <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-red-200">
@@ -93,7 +85,7 @@ export function LoginForm({ onSuccess, className = '' }: LoginFormProps) {
         error={errors.email}
         placeholder="tu@email.com"
         leftIcon={
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
           </svg>
         }
@@ -110,7 +102,7 @@ export function LoginForm({ onSuccess, className = '' }: LoginFormProps) {
         error={errors.password}
         placeholder="••••••••"
         leftIcon={
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         }

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
-import UserRegister from './pages/UserRegister';
+import UserRegisterPerfect from './pages/UserRegisterPerfect';
 import { LoginPage as NewLoginPage } from './components/LoginPage';
 import { Button } from './components/ui';
 
@@ -34,7 +34,7 @@ function Navigation() {
           {isAuthenticated ? (
             <>
               <span className="text-sm text-slate-400">
-                Hola, {(user as any)?.firstName || 'Usuario'}
+                Hola, {user?.firstName || user?.email || 'Usuario'}
               </span>
               <Button
                 variant="secondary"
@@ -218,7 +218,7 @@ function AppContent() {
         />
         <Route
           path="/register"
-          element={<UserRegister />}
+          element={<UserRegisterPerfect />}
         />
         
         {/* Página de inicio mejorada */}

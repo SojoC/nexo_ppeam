@@ -9,6 +9,10 @@ from typing import Optional               # para tipos opcionales
 import os                                 # para leer variables de entorno (SECRET_KEY)
 import firebase_admin                     # SDK admin de Firebase
 from firebase_admin import credentials, firestore  # para conectar con Firestore
+from typing import Any
+
+# Compat shim for static type checkers (firestore module may not expose attributes in stubs)
+SERVER_TIMESTAMP = firestore.SERVER_TIMESTAMP  # type: ignore[attr-defined]
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr  # validación de email
 from jose import jwt                      # para firmar/leer JWT
@@ -119,7 +123,7 @@ def register_user(body: RegisterRequest):
         "provider": "password",             # registro local
         "role": "user",                     # por defecto usuario
         "active": True,                     # habilitado
-        "created_at": firestore.SERVER_TIMESTAMP,
+    "created_at": SERVER_TIMESTAMP,
     }
 
     # 4) Guardar en Firestore con ID = email
@@ -143,6 +147,9 @@ def login_user(body: LoginRequest):
         raise HTTPException(status_code=401, detail="Credenciales inválidas.")
 
     data = doc.to_dict()
+    if data is None:
+        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
+        
     # Si el usuario se registró con OAuth, no tendrá password_hash
     if "password_hash" not in data:
         raise HTTPException(status_code=400, detail="El usuario usa proveedor externo (Google/Facebook).")
@@ -183,7 +190,7 @@ def sms_request_code(body: SmsRequest):
         "phone": body.phone,
         "code": "123456",                         # MOCK
         "expire_at": datetime.utcnow() + timedelta(minutes=5),
-        "created_at": firestore.SERVER_TIMESTAMP,
+    "created_at": SERVER_TIMESTAMP,
     })
     return {"status": "ok", "message": "Código OTP enviado (mock: 123456)"}
 
@@ -201,6 +208,9 @@ def sms_verify_code(body: SmsVerifyRequest):
         raise HTTPException(status_code=400, detail="No hay OTP pendiente para este teléfono.")
 
     data = doc.to_dict()
+    if data is None:
+        raise HTTPException(status_code=400, detail="No hay OTP pendiente para este teléfono.")
+        
     # Validación simple del código (mock)
     if body.code != data.get("code"):
         raise HTTPException(status_code=400, detail="Código inválido.")

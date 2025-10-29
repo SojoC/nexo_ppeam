@@ -24,8 +24,8 @@ export const Input: React.FC<InputProps> = ({
     'w-full bg-[#0f172a] border rounded-xl px-3 py-2 text-slate-200 placeholder-slate-500 transition-colors duration-200',
     'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent',
     error ? 'border-red-500' : 'border-[#334155]',
-    leftIcon ? 'pl-10' : '',
-    rightIcon ? 'pr-10' : '',
+    leftIcon ? 'pl-7' : '',
+    rightIcon ? 'pr-7' : '',
     className
   ].join(' ');
   
@@ -39,7 +39,7 @@ export const Input: React.FC<InputProps> = ({
       
       <div className="relative">
         {leftIcon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+          <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400">
             {leftIcon}
           </div>
         )}

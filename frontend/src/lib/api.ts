@@ -17,7 +17,7 @@ export const api = axios.create({
 
 // Interceptor para incluir token JWT automáticamente en todas las requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('authToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -30,7 +30,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expirado o inválido, limpiar localStorage
-      localStorage.removeItem('access_token');
+      localStorage.removeItem('authToken');
       // Opcional: redirigir a login
       // window.location.href = '/login';
     }
@@ -102,7 +102,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
   
   // Guardar token en localStorage para requests futuras
   if (response.data.access_token) {
-    localStorage.setItem('access_token', response.data.access_token);
+    localStorage.setItem('authToken', response.data.access_token);
   }
   
   return response.data;
@@ -129,7 +129,7 @@ export async function verifySmsOtp(phone: string, code: string): Promise<LoginRe
   
   // Guardar token en localStorage
   if (response.data.access_token) {
-    localStorage.setItem('access_token', response.data.access_token);
+    localStorage.setItem('authToken', response.data.access_token);
   }
   
   return response.data;
@@ -139,7 +139,7 @@ export async function verifySmsOtp(phone: string, code: string): Promise<LoginRe
  * Cerrar sesión (limpiar token local)
  */
 export function logout() {
-  localStorage.removeItem('access_token');
+  localStorage.removeItem('authToken');
 }
 
 /**
@@ -147,7 +147,7 @@ export function logout() {
  * @returns true si hay token guardado
  */
 export function isAuthenticated(): boolean {
-  return !!localStorage.getItem('access_token');
+  return !!localStorage.getItem('authToken');
 }
 
 // ============== USERS CRUD ==============
@@ -172,7 +172,7 @@ export async function listUsers(
   limit: number = 50, 
   congregacion?: string
 ): Promise<User[]> {
-  const params: any = { limit };
+  const params: Record<string, string | number> = { limit };
   if (congregacion) {
     params.congregacion = congregacion;
   }
@@ -241,14 +241,17 @@ export async function getUserStats(): Promise<{
  * @param error Error de axios
  * @returns Mensaje de error para mostrar al usuario
  */
-export function getErrorMessage(error: any): string {
-  if (error.response?.data?.detail) {
-    return error.response.data.detail;
+export function getErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const axiosError = error as { response?: { data?: { detail?: string; message?: string } } };
+    if (axiosError.response?.data?.detail) {
+      return axiosError.response.data.detail;
+    }
+    if (axiosError.response?.data?.message) {
+      return axiosError.response.data.message;
+    }
   }
-  if (error.response?.data?.message) {
-    return error.response.data.message;
-  }
-  if (error.message) {
+  if (error instanceof Error && error.message) {
     return error.message;
   }
   return 'Error desconocido. Revisa la conexión con el servidor.';

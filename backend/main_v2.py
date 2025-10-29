@@ -178,15 +178,15 @@ async def log_requests(request: Request, call_next):
 # ==================== EXCEPTION HANDLERS ====================
 
 # Registrar handlers personalizados
-app.add_exception_handler(NexoBaseException, nexo_exception_handler)
-app.add_exception_handler(Exception, general_exception_handler)
-
-# Handlers FastAPI estándar
+from typing import cast
+from typing import Any, Callable
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 
-app.add_exception_handler(HTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(NexoBaseException, cast(Callable, nexo_exception_handler))
+app.add_exception_handler(Exception, cast(Callable, general_exception_handler))
+app.add_exception_handler(HTTPException, cast(Callable, http_exception_handler))
+app.add_exception_handler(RequestValidationError, cast(Callable, validation_exception_handler))
 
 # ==================== ROUTERS ====================
 
