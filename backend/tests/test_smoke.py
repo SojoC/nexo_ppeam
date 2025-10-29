@@ -3,6 +3,7 @@ from main_v2 import app
 
 # Import the dependency key to override (function defined in services.auth_service)
 from services.auth_service import get_auth_service
+from core.security import get_current_user
 
 
 class FakeAuthService:
@@ -38,7 +39,19 @@ class FakeAuthService:
 
 # Fixture: TestClient con override de dependencia
 client = TestClient(app)
+# Override AuthService y get_current_user para evitar dependencia de Firestore
 app.dependency_overrides[get_auth_service] = lambda: FakeAuthService()
+
+def _fake_get_current_user(credentials=None):
+    try:
+        token = credentials.credentials
+    except Exception:
+        token = credentials
+    if isinstance(token, str) and token.startswith("fake-token-for-"):
+        return token.replace("fake-token-for-", "")
+    return token
+
+app.dependency_overrides[get_current_user] = _fake_get_current_user
 
 
 def test_health():

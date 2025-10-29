@@ -7,6 +7,7 @@ import sys
 from fastapi.testclient import TestClient
 from main_v2 import app
 from services.auth_service import get_auth_service
+from core.security import get_current_user
 
 
 class FakeAuthService:
@@ -36,7 +37,13 @@ class FakeAuthService:
 def run():
     print("Iniciando smoke tests...")
     client = TestClient(app)
+    # Override the AuthService to avoid usar Firestore
     app.dependency_overrides[get_auth_service] = lambda: FakeAuthService()
+
+    # Inicialmente dejamos get_current_user en su estado normal; tras el login
+    # sobreescribiremos la dependencia para devolver directamente el email de prueba
+    # (esto evita depender de la decodificación JWT en el entorno de pruebas).
+    # Nota: hacemos la sobreescritura después de obtener el token.
 
     # Health
     r = client.get("/health")
@@ -63,6 +70,10 @@ def run():
     print("OK: login -> token len", len(token or ""))
 
     # Me
+    # Ahora sobreescribimos la dependencia get_current_user para que devuelva
+    # directamente el email de prueba (evitamos decodificar el JWT en tests)
+    app.dependency_overrides[get_current_user] = lambda credentials=None: email
+
     headers = {"Authorization": f"Bearer {token}"}
     r = client.get("/api/v2/auth/me", headers=headers)
     if r.status_code != 200:
