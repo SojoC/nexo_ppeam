@@ -222,10 +222,12 @@ app.include_router(auth_router, prefix="/api/v2")
 app.include_router(users_router, prefix="/api/v2")
 
 # Legacy API (Compatibilidad temporal)
-app.include_router(contacts_router, prefix="/api/v1", tags=["v1-legacy"])
-app.include_router(messages_router, prefix="/api/v1", tags=["v1-legacy"])
-app.include_router(campaigns_router, prefix="/api/v1", tags=["v1-legacy"])
-app.include_router(realtime_router, prefix="/api/v1", tags=["v1-legacy"])
+# NOTE: Se comentan los routers legacy para evitar solapamientos mientras
+# consolidamos la API v2. Si necesitas restaurar rutas v1, descomenta estas líneas.
+# app.include_router(contacts_router, prefix="/api/v1", tags=["v1-legacy"])
+# app.include_router(messages_router, prefix="/api/v1", tags=["v1-legacy"])
+# app.include_router(campaigns_router, prefix="/api/v1", tags=["v1-legacy"])
+# app.include_router(realtime_router, prefix="/api/v1", tags=["v1-legacy"])
 
 # ==================== ROOT ENDPOINT ====================
 

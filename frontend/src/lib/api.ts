@@ -7,8 +7,11 @@ import axios from "axios";
 export const API_URL = import.meta.env.VITE_API_URL as string;
 
 // Instancia axios con baseURL para evitar repetir rutas absolutas
+// Por defecto apuntamos a la versión v2 de la API si no está incluida en la URL
+const API_BASE = API_URL.endsWith('/api/v2') ? API_URL : `${API_URL.replace(/\/$/, '')}/api/v2`;
+
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import * as apiClient from "../lib/api";
+import type { AuthUser } from "../types";
 
 // -----------------------------
 // useAuth.tsx
@@ -9,17 +10,7 @@ import * as apiClient from "../lib/api";
 // - Usa las funciones de `frontend/src/lib/api.ts` para comunicarse con el backend
 // -----------------------------
 
-// Tipo del usuario que almacenamos en el frontend (minimal)
-export interface AuthUser {
-  id?: string;
-  email?: string | undefined;
-  displayName?: string | undefined;
-  // Campos usados por la app en varios componentes
-  firstName?: string | undefined;
-  lastName?: string | undefined;
-  isActive?: boolean | undefined;
-  createdAt?: string | undefined;
-}
+// Usamos el tipo centralizado `AuthUser` de `src/types.ts`
 
 // Interfaz del contexto de Auth
 export interface AuthContextType {
@@ -42,26 +33,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Comprobar token al montar el provider
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      // Si existe token asumimos sesión válida. No intentamos decodificar el JWT
-      // aquí para evitar dependencias adicionales; podríamos obtener perfil
-      // desde /auth/me si el backend lo expone.
-      setUser({ email: undefined });
-    } else {
-      setUser(null);
-    }
-    setIsLoading(false);
+    const initialize = async () => {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        // No hay token guardado
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Si hay token, intentamos obtener el perfil real desde /auth/me
+      try {
+        const resp = await apiClient.api.get('/auth/me');
+        // Resp.data puede tener distintos campos según el backend; mapeamos defensivamente
+        const data = resp.data || {};
+        setUser({
+          id: data.id || data.user_id || undefined,
+          email: data.email || undefined,
+          displayName: data.display_name || data.displayName || undefined,
+          firstName: data.first_name || data.firstName || undefined,
+          lastName: data.last_name || data.lastName || undefined,
+          isActive: typeof data.is_active === 'boolean' ? data.is_active : data.isActive,
+          createdAt: data.created_at || data.createdAt || undefined,
+        });
+      } catch (error) {
+        // Si la petición falla (token inválido/expirado), limpiamos el token
+        // y dejamos un debug para diagnóstico en desarrollo
+        // (no mostramos el error al usuario desde aquí)
+  console.debug('Auth initialize error:', error);
+        localStorage.removeItem('authToken');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void initialize();
   }, []);
 
   // Login: llama a la API y actualiza el estado
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      // Llamamos al endpoint de login que guarda el token en localStorage
       await apiClient.login(email, password);
-      // apiClient.login guarda el token en localStorage
-      // Guardamos un perfil mínimo (email) en el contexto
-      setUser({ email });
+
+      // Tras login exitoso, pedimos el perfil completo al backend
+      try {
+        const resp = await apiClient.api.get('/auth/me');
+        const data = resp.data || {};
+        setUser({
+          id: data.id || data.user_id || undefined,
+          email: data.email || email,
+          displayName: data.display_name || data.displayName || undefined,
+          firstName: data.first_name || data.firstName || undefined,
+          lastName: data.last_name || data.lastName || undefined,
+          isActive: typeof data.is_active === 'boolean' ? data.is_active : data.isActive,
+          createdAt: data.created_at || data.createdAt || undefined,
+        });
+      } catch (error) {
+        // Si no existe /auth/me o falla, nos quedamos con un perfil mínimo
+  console.debug('Auth login: /auth/me error:', error);
+        setUser({ email });
+      }
     } finally {
       setIsLoading(false);
     }
