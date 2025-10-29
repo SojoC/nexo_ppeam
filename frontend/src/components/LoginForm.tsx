@@ -58,7 +58,8 @@ export function LoginForm({ onSuccess, className = '' }: LoginFormProps) {
     }
 
     try {
-      await login();
+      // Pasamos email y password al hook de autenticación
+      await login(formData.email, formData.password);
       onSuccess?.();
     } catch (error) {
       setErrors({

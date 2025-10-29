@@ -13,12 +13,15 @@ const civil = ["soltero", "casado", "divorciado", "viudo"] as const;
 
 function SectionCard({ title, children, actions }: { title: string; children: React.ReactNode; actions?: React.ReactNode }) {
   return (
+    // Card container: fondo oscuro, borde sutil y bordes redondeados
     <section className="bg-[#0f172a] border border-[#223048] rounded-2xl shadow-sm">
-      <header className="flex items-center justify-between px-5 py-4 border-b border-[#223048]">
+      {/* Header con título y acciones pequeñas */}
+      <header className="flex items-center justify-between px-6 py-4 border-b border-[#223048]">
         <h3 className="text-slate-200 font-semibold tracking-tight">{title}</h3>
         {actions}
       </header>
-      <div className="p-5">{children}</div>
+      {/* Cuerpo del card con padding consistente */}
+      <div className="p-6">{children}</div>
     </section>
   );
 }
@@ -32,8 +35,11 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={[
+        // ancho completo con esquinas suaves
         "w-full rounded-xl px-3 py-2 text-sm",
+        // fondo ligeramente más claro que el fondo principal para contraste
         "bg-[#0b1222] border border-[#2a3b5f] text-slate-200",
+        // color del placeholder y estilos de focus accesibles
         "placeholder:text-slate-500",
         "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
         props.className || "",
@@ -89,6 +95,7 @@ export default function UserRegisterModern() {
     updateFormField,
   } = useUsersRegister();
 
+  // Texto de búsqueda para filtrar la tabla
   const [searchQuery, setSearchQuery] = useState("");
 
   // Filtro de búsqueda simple
@@ -102,29 +109,36 @@ export default function UserRegisterModern() {
     );
   }, [searchQuery, users]);
 
+  // Maneja cambios en inputs y selects del formulario. Convierte 'edad' a number cuando aplica.
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    updateFormField(name as keyof typeof formData, name === "edad" && value ? Number(value) : value);
+    const parsed = name === "edad" && value ? Number(value) : value;
+    updateFormField(name as keyof typeof formData, parsed);
   };
 
+  // Agregar nuevo usuario: delega al hook useUsersRegister
   const handleAdd = async () => {
     await createNewUser(formData);
   };
 
+  // Actualizar usuario seleccionado
   const handleEdit = async () => {
     if (!selectedId) return;
     await updateUser(selectedId, formData);
   };
 
+  // Eliminar usuario seleccionado (llama al repositorio)
   const handleDelete = async () => {
     if (!selectedId) return;
     await deleteUser(selectedId);
   };
 
+  // Cargar datos del usuario en el formulario para editar
   const selectForEdit = (u: typeof users[0]) => {
     selectUserForEdit(u);
   };
 
+  // Página completa: fondo oscuro y texto claro
   return (
     <div className="min-h-screen bg-[#0b0f1a] text-slate-200">
       {/* Mensaje de feedback (toast flotante) */}
@@ -135,9 +149,10 @@ export default function UserRegisterModern() {
       />
 
       {/* Top bar */}
+      {/* Barra superior con título y acciones globales */}
       <header className="border-b border-[#20304d] bg-[#0c1220]/80 backdrop-blur supports-[backdrop-filter]:bg-[#0c1220]/60">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">Nexo_PPAM / Registro de Usuarios</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Sistema de Registro de Usuarios</h1>
           <div className="hidden md:flex items-center gap-3">
             <Input placeholder="Buscar por nombre, email…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             <ToolbarButton variant="ghost">Exportar</ToolbarButton>
@@ -146,9 +161,11 @@ export default function UserRegisterModern() {
       </header>
 
       {/* Main layout */}
-      <main className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+  {/* Layout principal con 3 columnas en pantallas grandes */}
+  <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Columna izquierda: acciones (sticky) */}
-        <div className="lg:col-span-1 h-max lg:sticky lg:top-6 space-y-6">
+  {/* Sidebar izquierdo: acciones y resumen (sticky) */}
+  <div className="lg:col-span-1 h-max lg:sticky lg:top-6 space-y-6">
           <SectionCard
             title="Acciones"
             actions={
@@ -174,6 +191,7 @@ export default function UserRegisterModern() {
           </SectionCard>
 
           <SectionCard title="Resumen">
+            {/* Estadísticas rápidas */}
             <div className="text-sm text-slate-300 grid grid-cols-2 gap-2">
               <div className="opacity-70">Total registros</div>
               <div className="text-right font-medium">{users.length}</div>
@@ -184,8 +202,10 @@ export default function UserRegisterModern() {
         </div>
 
         {/* Columna derecha: formulario + tabla (2/3) */}
-        <div className="lg:col-span-2 space-y-6">
+  {/* Area principal: formulario + tabla */}
+  <div className="lg:col-span-2 space-y-6">
           <SectionCard title="Datos Personales">
+            {/* Formulario de datos personales dividido en 3 columnas en pantallas grandes */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label>Nombre</Label>
@@ -230,6 +250,7 @@ export default function UserRegisterModern() {
           </SectionCard>
 
           <SectionCard title="Datos Congregación / Espirituales">
+            {/* Campos relacionados a congregación y datos espirituales */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label>Congregación</Label>
