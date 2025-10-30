@@ -40,15 +40,10 @@ async def health_check():
     logger.info("event=health_check status=ok")
     return {"status": "ok"}
 
-# Los routers legacy han sido movidos a `backend/legacy/` durante la
-# migración a la API v2. Mantengo las referencias originalmente aquí para
-# compatibilidad, pero se comentan para evitar exponer rutas duplicadas.
-# Para restaurar temporalmente, descomenta las líneas y asegúrate de que
-# las dependencias (models, repository) sean compatibles.
-# app.include_router(contacts_router)
-# app.include_router(messages_router)
-# app.include_router(campaigns_router)
-# app.include_router(realtime_router)
+app.include_router(contacts_router)
+app.include_router(messages_router)
+app.include_router(campaigns_router)
+app.include_router(realtime_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 

@@ -178,15 +178,15 @@ async def log_requests(request: Request, call_next):
 # ==================== EXCEPTION HANDLERS ====================
 
 # Registrar handlers personalizados
-from typing import cast
-from typing import Any, Callable
+app.add_exception_handler(NexoBaseException, nexo_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
+
+# Handlers FastAPI estándar
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError
 
-app.add_exception_handler(NexoBaseException, cast(Callable, nexo_exception_handler))
-app.add_exception_handler(Exception, cast(Callable, general_exception_handler))
-app.add_exception_handler(HTTPException, cast(Callable, http_exception_handler))
-app.add_exception_handler(RequestValidationError, cast(Callable, validation_exception_handler))
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # ==================== ROUTERS ====================
 
@@ -222,12 +222,10 @@ app.include_router(auth_router, prefix="/api/v2")
 app.include_router(users_router, prefix="/api/v2")
 
 # Legacy API (Compatibilidad temporal)
-# NOTE: Se comentan los routers legacy para evitar solapamientos mientras
-# consolidamos la API v2. Si necesitas restaurar rutas v1, descomenta estas líneas.
-# app.include_router(contacts_router, prefix="/api/v1", tags=["v1-legacy"])
-# app.include_router(messages_router, prefix="/api/v1", tags=["v1-legacy"])
-# app.include_router(campaigns_router, prefix="/api/v1", tags=["v1-legacy"])
-# app.include_router(realtime_router, prefix="/api/v1", tags=["v1-legacy"])
+app.include_router(contacts_router, prefix="/api/v1", tags=["v1-legacy"])
+app.include_router(messages_router, prefix="/api/v1", tags=["v1-legacy"])
+app.include_router(campaigns_router, prefix="/api/v1", tags=["v1-legacy"])
+app.include_router(realtime_router, prefix="/api/v1", tags=["v1-legacy"])
 
 # ==================== ROOT ENDPOINT ====================
 

@@ -7,10 +7,6 @@ from typing import Optional, Dict, Any, List
 from functools import lru_cache
 import firebase_admin
 from firebase_admin import credentials, firestore
-from typing import Any
-
-# Compat shim for static type checkers (firestore module may not expose attributes in stubs)
-SERVER_TIMESTAMP = getattr(firestore, 'SERVER_TIMESTAMP')  # type: ignore[attr-defined]
 from google.cloud.firestore_v1 import Client, CollectionReference, DocumentReference
 
 from core.config import get_settings, get_firebase_credentials_path
@@ -338,9 +334,8 @@ def query_collection(
         results = []
         for doc in docs:
             data = doc.to_dict()
-            if data is not None:
-                data['id'] = doc.id  # Incluir el ID del documento
-                results.append(data)
+            data['id'] = doc.id  # Incluir el ID del documento
+            results.append(data)
             
         logger.info(f"Consulta ejecutada en {collection}: {len(results)} resultados")
         return results
@@ -369,7 +364,7 @@ def check_database_health() -> Dict[str, Any]:
         test_ref = conn.collection("_health_check").document("test")
         
         # Escribir y leer un documento de prueba
-        test_data = {"timestamp": SERVER_TIMESTAMP, "status": "healthy"}
+        test_data = {"timestamp": firestore.SERVER_TIMESTAMP, "status": "healthy"}
         test_ref.set(test_data)
         
         # Verificar que se puede leer
@@ -378,11 +373,10 @@ def check_database_health() -> Dict[str, Any]:
         # Limpiar el documento de prueba
         test_ref.delete()
         
-        d = doc.to_dict() if doc.exists else None
         return {
             "connected": True,
             "message": "Firestore connection healthy",
-            "timestamp": d.get("timestamp") if d is not None else None
+            "timestamp": doc.to_dict().get("timestamp") if doc.exists else None
         }
         
     except Exception as e:

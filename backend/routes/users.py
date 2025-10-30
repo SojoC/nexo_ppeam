@@ -21,11 +21,6 @@ from typing import Optional, List
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
-from typing import Any
-
-# Compat shims for static type checkers
-SERVER_TIMESTAMP = firestore.SERVER_TIMESTAMP  # type: ignore[attr-defined]
-Query = getattr(firestore, 'Query')  # type: ignore[attr-defined]
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, EmailStr
 
@@ -61,24 +56,6 @@ class UserOut(UserIn):
     """Modelo para salida de datos (incluye ID de Firestore)"""
     id: str
 
-# ===================== HELPER FUNCTIONS =====================
-
-def safe_user_data(data: dict) -> dict:
-    """Extrae datos de usuario de forma segura, con valores por defecto para campos requeridos"""
-    return {
-        "nombre": data.get("nombre", ""),
-        "edad": data.get("edad"),
-        "fecha_nacimiento": data.get("fecha_nacimiento"),
-        "sexo": data.get("sexo"),
-        "estado_civil": data.get("estado_civil"),
-        "fecha_bautismo": data.get("fecha_bautismo"),
-        "privilegio": data.get("privilegio"),
-        "telefono": data.get("telefono"),
-        "congregacion": data.get("congregacion"),
-        "ciudad": data.get("ciudad"),
-        "email": data.get("email")
-    }
-
 # ===================== ENDPOINTS CRUD =====================
 
 @router.post("/users", response_model=UserOut)
@@ -109,8 +86,8 @@ def create_user(body: UserIn):
     user_data = {
         **body.model_dump(),  # todos los campos del modelo
         "email": body.email.lower() if body.email else None,  # normalizar email
-    "created_at": SERVER_TIMESTAMP,  # timestamp del servidor
-    "updated_at": SERVER_TIMESTAMP
+        "created_at": firestore.SERVER_TIMESTAMP,  # timestamp del servidor
+        "updated_at": firestore.SERVER_TIMESTAMP
     }
     
     # Guardar en Firestore
@@ -139,8 +116,7 @@ def list_users(
         query = query.where("congregacion", "==", congregacion)
     
     # Ordenar por fecha de creación y aplicar límite
-    query = query.order_by("created_at", direction=firestore.Query.DESCENDING)  # type: ignore[attr-defined]
-    query = query.limit(limit)
+    query = query.order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit)
     
     # Ejecutar query
     docs = query.get()
@@ -149,10 +125,8 @@ def list_users(
     users = []
     for doc in docs:
         data = doc.to_dict()
-        if data is None:
-            continue
         # Extraer solo los campos que pertenecen al modelo UserIn
-        user_data = safe_user_data(data)
+        user_data = {k: data.get(k) for k in UserIn.model_fields.keys()}
         users.append(UserOut(id=doc.id, **user_data))
     
     return users
@@ -172,9 +146,7 @@ def get_user(user_id: str):
     
     # Extraer datos del documento
     data = doc.to_dict()
-    if data is None:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    user_data = safe_user_data(data)
+    user_data = {k: data.get(k) for k in UserIn.model_fields.keys()}
     
     return UserOut(id=doc.id, **user_data)
 
@@ -209,7 +181,7 @@ def update_user(user_id: str, body: UserIn):
     update_data = {
         **body.model_dump(),
         "email": body.email.lower() if body.email else None,
-    "updated_at": SERVER_TIMESTAMP
+        "updated_at": firestore.SERVER_TIMESTAMP
     }
     
     # Actualizar documento
@@ -218,9 +190,7 @@ def update_user(user_id: str, body: UserIn):
     # Obtener documento actualizado para retornar
     updated_doc = doc_ref.get()
     data = updated_doc.to_dict()
-    if data is None:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado después de actualizar")
-    user_data = safe_user_data(data)
+    user_data = {k: data.get(k) for k in UserIn.model_fields.keys()}
     
     return UserOut(id=user_id, **user_data)
 
@@ -259,9 +229,7 @@ def get_user_by_phone(phone: str):
     
     doc = query[0]
     data = doc.to_dict()
-    if data is None:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    user_data = safe_user_data(data)
+    user_data = {k: data.get(k) for k in UserIn.model_fields.keys()}
     
     return UserOut(id=doc.id, **user_data)
 
@@ -278,8 +246,6 @@ def get_congregacion_stats():
     stats = {}
     for doc in users:
         data = doc.to_dict()
-        if data is None:
-            continue
         congregacion = data.get("congregacion", "Sin congregación")
         stats[congregacion] = stats.get(congregacion, 0) + 1
     

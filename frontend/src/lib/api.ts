@@ -7,11 +7,8 @@ import axios from "axios";
 export const API_URL = import.meta.env.VITE_API_URL as string;
 
 // Instancia axios con baseURL para evitar repetir rutas absolutas
-// Por defecto apuntamos a la versión v2 de la API si no está incluida en la URL
-const API_BASE = API_URL.endsWith('/api/v2') ? API_URL : `${API_URL.replace(/\/$/, '')}/api/v2`;
-
 export const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: API_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -20,7 +17,7 @@ export const api = axios.create({
 
 // Interceptor para incluir token JWT automáticamente en todas las requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -33,7 +30,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expirado o inválido, limpiar localStorage
-      localStorage.removeItem('authToken');
+      localStorage.removeItem('access_token');
       // Opcional: redirigir a login
       // window.location.href = '/login';
     }
@@ -105,7 +102,7 @@ export async function login(email: string, password: string): Promise<LoginRespo
   
   // Guardar token en localStorage para requests futuras
   if (response.data.access_token) {
-    localStorage.setItem('authToken', response.data.access_token);
+    localStorage.setItem('access_token', response.data.access_token);
   }
   
   return response.data;
@@ -132,7 +129,7 @@ export async function verifySmsOtp(phone: string, code: string): Promise<LoginRe
   
   // Guardar token en localStorage
   if (response.data.access_token) {
-    localStorage.setItem('authToken', response.data.access_token);
+    localStorage.setItem('access_token', response.data.access_token);
   }
   
   return response.data;
@@ -142,7 +139,7 @@ export async function verifySmsOtp(phone: string, code: string): Promise<LoginRe
  * Cerrar sesión (limpiar token local)
  */
 export function logout() {
-  localStorage.removeItem('authToken');
+  localStorage.removeItem('access_token');
 }
 
 /**
@@ -150,7 +147,7 @@ export function logout() {
  * @returns true si hay token guardado
  */
 export function isAuthenticated(): boolean {
-  return !!localStorage.getItem('authToken');
+  return !!localStorage.getItem('access_token');
 }
 
 // ============== USERS CRUD ==============

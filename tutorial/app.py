@@ -1,10 +1,7 @@
 import sys
 sys.path.append('./backend')
 from backend.services.contact_service import crear_contacto
-try:
-    from backend.config.firebase_config import db_firestore
-except Exception:
-    db_firestore = None
+from backend.config.firebase_config import db_firestore
 from backend.services.contact_service_firestore import obtener_contacto
 from backend.services.contact_service_firestore import buscar_contacto_por_id  
 from backend.services.contact_service_firestore import buscar_por_limite_contacto 
@@ -30,17 +27,14 @@ if __name__ == "__main__":
 
     # Buscar el contacto recién creado por su Id
     print("\nBuscando contacto por Id=505...")
-    if db_firestore is None:
-        print("db_firestore not configured; skipping Firestore example")
-    else:
-        coleccion = db_firestore.collection('Congregacion')
-        query = coleccion.where('id', '==', 505).stream()
-        encontrado = False
-        for doc in query:
-            print(f"ID Firestore: {doc.id} => {doc.to_dict()}")
-            encontrado = True
-        if not encontrado:
-            print("No se encontró el contacto con Id=505.")
+    coleccion = db_firestore.collection('Congregacion')
+    query = coleccion.where('id', '==', 505).stream()
+    encontrado = False
+    for doc in query:
+        print(f"ID Firestore: {doc.id} => {doc.to_dict()}")
+        encontrado = True
+    if not encontrado:
+        print("No se encontró el contacto con Id=505.")
 
 
 

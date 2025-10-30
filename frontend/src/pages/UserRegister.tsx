@@ -9,7 +9,7 @@
 import { useUsersRegister } from "../hooks/useUsersRegister";
 import RegisterForm from "../components/RegisterForm";
 import RegisteredUsersTable from "../components/RegisteredUsersTable";
-import { FeedbackAlert } from "../components/FeedbackAlert";
+import FeedbackAlert from "../components/FeedbackAlert";
 import type { RegisterFormData } from "../components/RegisterForm";
 
 export default function UserRegister() {
@@ -60,87 +60,54 @@ export default function UserRegister() {
 
   // -------------------- RENDER --------------------
   return (
-    <div className="min-h-screen bg-[#0b0f1a] text-slate-200">
-      {/* Mensaje de feedback (toast flotante) */}
-      <FeedbackAlert
-        message={message}
-        type={messageType}
-        onClose={clearMessage}
-      />
-
-      {/* Layout principal con sidebar moderno */}
-      <div className="lg:grid lg:grid-cols-3 lg:gap-0 min-h-screen">
+    <div className="min-h-screen bg-[#0b0f1a] text-slate-200 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Sidebar izquierdo - Formulario de registro */}
-        <div className="lg:col-span-1 bg-[#0f172a] border-r border-[#223048]">
-          <div className="h-full flex flex-col">
-            
-            {/* Header del sidebar */}
-            <header className="p-6 border-b border-[#223048]">
-              <h2 className="text-xl font-semibold text-slate-200 mb-1">
-                {isEditing ? "Editar Usuario" : "Registrar Usuario"}
-              </h2>
-              <p className="text-sm text-slate-400">
-                Gestiona la información de los miembros
-              </p>
-            </header>
+        {/* Encabezado */}
+        <header className="text-center">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            Sistema de Registro de Usuarios
+          </h1>
+          <p className="text-slate-400">
+            Gestiona la información completa de los miembros de la congregación
+          </p>
+        </header>
 
-            {/* Formulario scrollable */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <RegisterForm
-                formData={formData}
-                onChange={handleFormChange}
-                onSubmit={handleFormSubmit}
-                onClear={clearForm}
-                isEditing={isEditing}
-                selectedId={selectedId}
-              />
-            </div>
-          </div>
-        </div>
+        {/* Mensaje de feedback */}
+        {message && (
+          <FeedbackAlert
+            type={messageType}
+            message={message}
+            onClose={clearMessage}
+            autoClose
+            duration={5000}
+          />
+        )}
 
-        {/* Área principal - Tabla de usuarios */}
-        <div className="lg:col-span-2 flex flex-col">
+        {/* Layout principal con grid responsive */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
           
-          {/* Top navigation bar */}
-          <header className="bg-[#0f172a] border-b border-[#223048] p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-200 mb-1">
-                  Sistema de Usuarios
-                </h1>
-                <p className="text-sm text-slate-400">
-                  Total de registros: {users.length}
-                </p>
-              </div>
-              
-              {/* Estadísticas rápidas */}
-              <div className="flex gap-4">
-                <div className="text-center">
-                  <div className="text-lg font-semibold text-indigo-400">
-                    {users.filter(u => u.privilegio).length}
-                  </div>
-                  <div className="text-xs text-slate-500">Con privilegio</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-semibold text-green-400">
-                    {users.filter(u => u.fecha_bautismo).length}
-                  </div>
-                  <div className="text-xs text-slate-500">Bautizados</div>
-                </div>
-              </div>
-            </div>
-          </header>
+          {/* Formulario de registro - ocupa 3 columnas */}
+          <div className="xl:col-span-3">
+            <RegisterForm
+              formData={formData}
+              onChange={handleFormChange}
+              onSubmit={handleFormSubmit}
+              onClear={clearForm}
+              isEditing={isEditing}
+              selectedId={selectedId}
+            />
+          </div>
 
-          {/* Contenido principal scrollable */}
-          <main className="flex-1 overflow-y-auto p-6 bg-[#0b0f1a]">
+          {/* Tabla de usuarios - ocupa 2 columnas */}
+          <div className="xl:col-span-2">
             <RegisteredUsersTable
               users={users}
               loading={loading}
               onEdit={handleUserEdit}
               onDelete={handleUserDelete}
             />
-          </main>
+          </div>
         </div>
       </div>
     </div>

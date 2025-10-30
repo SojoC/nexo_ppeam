@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
-import UserRegisterPerfect from './pages/UserRegisterPerfect';
+import UserRegister from './pages/UserRegister';
 import { LoginPage as NewLoginPage } from './components/LoginPage';
 import { Button } from './components/ui';
 
@@ -218,7 +218,7 @@ function AppContent() {
         />
         <Route
           path="/register"
-          element={<UserRegisterPerfect />}
+          element={<UserRegister />}
         />
         
         {/* Página de inicio mejorada */}

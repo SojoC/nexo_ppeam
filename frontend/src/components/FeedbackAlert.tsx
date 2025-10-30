@@ -1,80 +1,106 @@
-export type MessageType = "success" | "error" | "info" | "warning";
+import React from "react";
 
-export interface FeedbackAlertProps {
+// ==========================
+// FeedbackAlert — Componente para mostrar mensajes de éxito/error
+// - Diseño consistente con el tema dark
+// - Iconos apropiados para cada tipo de mensaje
+// - Auto-dismiss opcional
+// ==========================
+
+type AlertType = "success" | "error" | "info" | "warning";
+
+interface FeedbackAlertProps {
+  type: AlertType;
   message: string;
-  type: MessageType;
-  onClose: () => void;
+  onClose?: () => void;
+  autoClose?: boolean;
+  duration?: number; // en milisegundos
 }
 
-export function FeedbackAlert({ message, type, onClose }: FeedbackAlertProps) {
-  if (!message) return null;
+function AlertIcon({ type }: { type: AlertType }) {
+  const iconClasses = "w-5 h-5";
+  
+  switch (type) {
+    case "success":
+      return (
+        <svg className={`${iconClasses} text-green-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      );
+    case "error":
+      return (
+        <svg className={`${iconClasses} text-red-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      );
+    case "warning":
+      return (
+        <svg className={`${iconClasses} text-amber-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      );
+    case "info":
+    default:
+      return (
+        <svg className={`${iconClasses} text-blue-400`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+  }
+}
 
-  const getAlertStyles = () => {
-    const baseStyles = "mb-4 px-4 py-3 rounded-md border transition-all duration-300";
-    
-    switch (type) {
-      case "success":
-        return `${baseStyles} bg-green-900/20 border-green-600 text-green-300`;
-      case "error":
-        return `${baseStyles} bg-red-900/20 border-red-600 text-red-300`;
-      case "warning":
-        return `${baseStyles} bg-yellow-900/20 border-yellow-600 text-yellow-300`;
-      case "info":
-      default:
-        return `${baseStyles} bg-blue-900/20 border-blue-600 text-blue-300`;
+export default function FeedbackAlert({
+  type,
+  message,
+  onClose,
+  autoClose = false,
+  duration = 5000
+}: FeedbackAlertProps) {
+  
+  // Auto-close timer
+  React.useEffect(() => {
+    if (autoClose && onClose) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, duration);
+      
+      return () => clearTimeout(timer);
     }
-  };
-
-  const getIcon = () => {
-    switch (type) {
-      case "success":
-        return (
-          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        );
-      case "error":
-        return (
-          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        );
-      case "warning":
-        return (
-          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        );
-      case "info":
-      default:
-        return (
-          <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        );
-    }
+  }, [autoClose, onClose, duration]);
+  
+  const alertStyles = {
+    success: "bg-green-900/20 border-green-700/30 text-green-200",
+    error: "bg-red-900/20 border-red-700/30 text-red-200",
+    warning: "bg-amber-900/20 border-amber-700/30 text-amber-200",
+    info: "bg-blue-900/20 border-blue-700/30 text-blue-200",
   };
 
   return (
-    <div className={getAlertStyles()}>
-      <div className="flex items-start">
-        <div className="flex-shrink-0">
-          {getIcon()}
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium">{message}</p>
-        </div>
-        <div className="flex-shrink-0 ml-4">
-          <button
-            onClick={onClose}
-            className="inline-flex text-gray-400 hover:text-gray-200 focus:outline-none focus:text-gray-200 transition-colors duration-150"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <div className={`
+      rounded-xl border p-4 mb-6 flex items-start space-x-3
+      ${alertStyles[type]}
+    `}>
+      <div className="flex-shrink-0 mt-0.5">
+        <AlertIcon type={type} />
       </div>
+      
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">
+          {message}
+        </p>
+      </div>
+      
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="flex-shrink-0 text-slate-400 hover:text-slate-200 transition-colors"
+          aria-label="Cerrar alerta"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

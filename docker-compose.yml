@@ -5,8 +5,7 @@ services:
       dockerfile: Dockerfile
     # El código se copia a /app (ver backend/Dockerfile). Trabajar ahí.
     working_dir: /app
-    # Ejecutar la aplicación v2 (main_v2.py) para exponer routers modernizados (/api/v2/...)
-    command: uvicorn main_v2:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
     environment:
       # Habilita imports desde /app (p.ej. config, routes, models)
       PYTHONPATH: /app

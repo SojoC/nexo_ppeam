@@ -1,7 +1,14 @@
-"""
-Router legacy movido a `backend/legacy/routes/realtime.py`.
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from realtime.ws import manager
 
-Re-export del router desde el paquete `legacy` para compatibilidad.
-"""
+router = APIRouter(tags=["realtime"])
 
-from legacy.routes.realtime import router as router
+@router.websocket("/ws/{contact_id}")
+async def ws_contact(websocket: WebSocket, contact_id: str):
+    await manager.connect(contact_id, websocket)
+    try:
+        while True:
+            # Si el cliente envía algo (p.ej. ACK/lectura), lo recibimos aquí
+            _ = await websocket.receive_text()
+    except WebSocketDisconnect:
+         await manager.disconnect(contact_id, websocket)

@@ -1,10 +1,10 @@
 import React from "react";
 
 // ==========================
-// RegisterForm — Formulario de registro modular profesional
-// - Layout por secciones que aprovecha el espacio horizontal
-// - Componentes reutilizables SectionCard, Label, Input, Select
-// - Grid responsive para distribuir campos optimamente
+// RegisterForm — Formulario de registro modular
+// - Recibe datos del usuario y callbacks del componente padre
+// - Layout responsive con grid que aprovecha el espacio
+// - Separación clara entre datos personales y congregacionales
 // ==========================
 
 export type RegisterFormData = {
@@ -31,7 +31,7 @@ interface RegisterFormProps {
 }
 
 // Opciones para select de estado civil
-const civil = ["soltero", "casado", "divorciado", "viudo"] as const;
+const estadoCivilOptions = ["soltero", "casado", "divorciado", "viudo"] as const;
 
 function SectionCard({ 
   title, 
@@ -43,12 +43,12 @@ function SectionCard({
   actions?: React.ReactNode 
 }) {
   return (
-    <section className="bg-[#0b0f1a] border border-[#223048] rounded-xl shadow-sm mb-4">
-      <header className="flex items-center justify-between px-4 py-3 border-b border-[#223048]">
-        <h3 className="text-slate-200 font-medium text-sm tracking-tight">{title}</h3>
+    <section className="bg-[#0f172a] border border-[#223048] rounded-2xl shadow-sm">
+      <header className="flex items-center justify-between px-5 py-4 border-b border-[#223048]">
+        <h3 className="text-slate-200 font-semibold tracking-tight">{title}</h3>
         {actions}
       </header>
-      <div className="p-4">{children}</div>
+      <div className="p-5">{children}</div>
     </section>
   );
 }
@@ -61,7 +61,7 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+function Input(props: React.InputHTMLAttributes<HTMLInputElement> & { value?: string | number }) {
   return (
     <input
       {...props}
@@ -140,181 +140,28 @@ export default function RegisterForm({
     }
   };
 
-  // Evitar warning de unused parameter
-  console.log("Editing:", isEditing, selectedId);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit();
+  };
 
   return (
-    <div className="space-y-4">
-      {/* Sección: Datos Personales */}
-      <SectionCard title="Datos Personales">
-        <div className="space-y-3">
-          
-          <div>
-            <Label>Nombre Completo *</Label>
-            <Input
-              type="text"
-              name="nombre"
-              value={formData.nombre || ""}
-              onChange={handleInputChange}
-              placeholder="Juan Pérez González"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Email</Label>
-              <Input
-                type="email"
-                name="email"
-                value={formData.email || ""}
-                onChange={handleInputChange}
-                placeholder="juan@email.com"
-              />
-            </div>
-
-            <div>
-              <Label>Teléfono</Label>
-              <Input
-                type="tel"
-                name="telefono"
-                value={formData.telefono || ""}
-                onChange={handleInputChange}
-                placeholder="300 123 4567"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Edad</Label>
-              <Input
-                type="number"
-                name="edad"
-                value={formData.edad ?? ""}
-                onChange={handleInputChange}
-                min="1"
-                max="120"
-                placeholder="25"
-              />
-            </div>
-
-            <div>
-              <Label>Sexo</Label>
-              <Select
-                name="sexo"
-                value={formData.sexo || ""}
-                onChange={handleInputChange}
-              >
-                <option value="">Seleccionar...</option>
-                <option value="masculino">Masculino</option>
-                <option value="femenino">Femenino</option>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <Label>Fecha de Nacimiento</Label>
-            <Input
-              type="date"
-              name="fecha_nacimiento"
-              value={formData.fecha_nacimiento || ""}
-              onChange={handleInputChange}
-            />
-          </div>
-
-          <div>
-            <Label>Estado Civil</Label>
-            <Select
-              name="estado_civil"
-              value={formData.estado_civil || ""}
-              onChange={handleInputChange}
-            >
-              <option value="">Seleccionar...</option>
-              {civil.map((estado) => (
-                <option key={estado} value={estado}>
-                  {estado.charAt(0).toUpperCase() + estado.slice(1)}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-        </div>
-      </SectionCard>
-
-      {/* Sección: Información Congregacional */}
-      <SectionCard title="Información Congregacional">
-        <div className="space-y-3">
-
-          <div>
-            <Label>Congregación</Label>
-            <Input
-              type="text"
-              name="congregacion"
-              value={formData.congregacion || ""}
-              onChange={handleInputChange}
-              placeholder="Congregación Norte"
-            />
-          </div>
-
-          <div>
-            <Label>Ciudad</Label>
-            <Input
-              type="text"
-              name="ciudad"
-              value={formData.ciudad || ""}
-              onChange={handleInputChange}
-              placeholder="Bogotá, Colombia"
-            />
-          </div>
-
-          <div>
-            <Label>Privilegio</Label>
-            <Select
-              name="privilegio"
-              value={formData.privilegio || ""}
-              onChange={handleInputChange}
-            >
-              <option value="">Sin privilegio</option>
-              <option value="anciano">Anciano</option>
-              <option value="siervo ministerial">Siervo Ministerial</option>
-              <option value="precursor regular">Precursor Regular</option>
-              <option value="precursor auxiliar">Precursor Auxiliar</option>
-              <option value="precursor especial">Precursor Especial</option>
-              <option value="betelita">Betelita</option>
-              <option value="misionero">Misionero</option>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Fecha de Bautismo</Label>
-            <Input
-              type="date"
-              name="fecha_bautismo"
-              value={formData.fecha_bautismo || ""}
-              onChange={handleInputChange}
-            />
-          </div>
-        </div>
-      </SectionCard>
-
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Sección: Acciones */}
-      <SectionCard title="Acciones">
-        <div className="flex gap-3">
-          <ToolbarButton 
-            variant="solid"
-            onClick={onSubmit}
-            type="button"
-          >
-            {isEditing ? "Actualizar Usuario" : "Registrar Usuario"}
+      <SectionCard
+        title="Acciones"
+        actions={
+          <span className="text-xs text-slate-400">
+            {isEditing ? `Editando: ${selectedId}` : "Nuevo registro"}
+          </span>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <ToolbarButton type="submit" variant="solid">
+            {isEditing ? "Actualizar" : "Agregar"}
           </ToolbarButton>
-          
-          <ToolbarButton 
-            variant="ghost"
-            onClick={onClear}
-            type="button"
-          >
-            Limpiar Formulario
+          <ToolbarButton type="button" onClick={onClear} variant="ghost">
+            Limpiar
           </ToolbarButton>
         </div>
       </SectionCard>
@@ -323,12 +170,13 @@ export default function RegisterForm({
       <SectionCard title="Datos Personales">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <Label>Nombre</Label>
+            <Label>Nombre *</Label>
             <Input
               name="nombre"
               value={formData.nombre || ""}
               onChange={handleInputChange}
               placeholder="Ej: Carlos Sojo"
+              required
             />
           </div>
           
@@ -374,9 +222,9 @@ export default function RegisterForm({
               onChange={handleInputChange}
             >
               <option value="">Seleccione…</option>
-              {civil.map((c) => (
-                <option key={c} value={c}>
-                  {c.charAt(0).toUpperCase() + c.slice(1)}
+              {estadoCivilOptions.map((estado) => (
+                <option key={estado} value={estado}>
+                  {estado.charAt(0).toUpperCase() + estado.slice(1)}
                 </option>
               ))}
             </Select>
@@ -390,6 +238,8 @@ export default function RegisterForm({
               value={formData.edad ?? ""}
               onChange={handleInputChange}
               placeholder="Ej: 35"
+              min="1"
+              max="120"
             />
           </div>
           
@@ -449,6 +299,6 @@ export default function RegisterForm({
           </div>
         </div>
       </SectionCard>
-    </div>
+    </form>
   );
 }
