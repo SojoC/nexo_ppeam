@@ -15,6 +15,7 @@ from main_v2 import app
 from services.auth_service import get_auth_service
 from services.user_service import get_user_service
 from core import security as core_security
+from core.exceptions import NotFoundError, ConflictError, AuthenticationError
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends
 
@@ -28,7 +29,7 @@ class FakeAuthService:
     async def register_user(self, email: str, password: str, display_name: str = None):
         email = email.lower()
         if email in self.users:
-            raise Exception("Conflict")
+            raise ConflictError(f"Email {email} ya existe")
         self.users[email] = {
             "id": email,
             "email": email,
@@ -50,7 +51,7 @@ class FakeAuthService:
         email = email.lower()
         u = self.users.get(email)
         if not u or u.get("password") != password:
-            raise Exception("Invalid credentials")
+            raise AuthenticationError("Credenciales inválidas")
         from core.security import create_access_token
         token = create_access_token(subject=email)
         return {"access_token": token, "token_type": "bearer"}
@@ -73,9 +74,9 @@ class FakeAuthService:
         email = email.lower()
         u = self.users.get(email)
         if not u:
-            raise Exception("User not found")
+            raise NotFoundError("Usuario")
         if u.get("password") != current_password:
-            raise Exception("Invalid current password")
+            raise AuthenticationError("Contraseña actual incorrecta")
         u["password"] = new_password
         return True
 
@@ -90,10 +91,21 @@ class FakeUserService:
     async def create_user(self, user_data: dict, created_by: str = None):
         # Use email as id if present, otherwise generate
         email = (user_data.get("email") or "").lower()
+        # Verificar conflicto por email o teléfono
         if email:
+            # si ya existe email -> conflicto
+            for u in self.users.values():
+                if (u.get("email") or "").lower() == email:
+                    raise ConflictError(f"Email {email} ya existe")
             user_id = email
         else:
+            # generar id incremental
             user_id = f"user-{len(self.users) + 1}"
+        phone = user_data.get("telefono")
+        if phone:
+            for u in self.users.values():
+                if u.get("telefono") == phone:
+                    raise ConflictError(f"Teléfono {phone} ya existe")
 
         user = {
             "id": user_id,
@@ -134,20 +146,20 @@ class FakeUserService:
     async def get_user(self, user_id: str):
         u = self.users.get(user_id)
         if not u:
-            raise Exception("Not found")
+            raise NotFoundError("Usuario")
         return u
 
     async def update_user(self, user_id: str, update_data: dict, updated_by: str = None):
         u = self.users.get(user_id)
         if not u:
-            raise Exception("Not found")
+            raise NotFoundError("Usuario")
         u.update(update_data)
         return u
 
     async def delete_user(self, user_id: str, soft_delete: bool = True):
         u = self.users.get(user_id)
         if not u:
-            raise Exception("Not found")
+            raise NotFoundError("Usuario")
         if soft_delete:
             u["active"] = False
         else:
