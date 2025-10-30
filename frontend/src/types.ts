@@ -6,6 +6,9 @@ export interface User {
   age: number;
   phone: string;
   tags: string[];
+  city?: string;
+  congregation?: string;
+  privilege?: string;
 }
 
 export interface UserInput {
@@ -13,7 +16,10 @@ export interface UserInput {
   email: string;
   age: number;
   phone: string;
-  tags: string;
+  tags?: string;
+  city?: string;
+  congregation?: string;
+  privilege?: string;
 }
 
 export interface LoginResponse {

@@ -29,7 +29,9 @@ export default function UsersPage() {
       email: data.email,
       age: 0,
       phone: data.phone || '',
-      tags: [data.city, data.congregation, data.privilege].filter(Boolean).join(', '),
+      city: data.city || undefined,
+      congregation: data.congregation || undefined,
+      privilege: data.privilege || undefined,
     };
 
     try {

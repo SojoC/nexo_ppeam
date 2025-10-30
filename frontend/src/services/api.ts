@@ -44,10 +44,14 @@ export const usersAPI = {
 
   create: async (userData: UserInput): Promise<User> => {
     const token = getToken();
-    const payload = {
-      ...userData,
-      tags: userData.tags.split(',').map(t => t.trim()).filter(Boolean),
-    };
+    // Build payload: accept optional tags or explicit city/congregation/privilege
+  const payload: Record<string, unknown> = { ...userData };
+    if (userData.tags && typeof userData.tags === 'string') {
+      payload.tags = userData.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+    } else if (!userData.tags) {
+      // ensure tags exists as array if not provided
+      payload.tags = [];
+    }
     const response = await fetch(`${API_URL}/users`, {
       method: 'POST',
       headers: {
@@ -61,10 +65,10 @@ export const usersAPI = {
 
   update: async (id: string, userData: UserInput): Promise<User> => {
     const token = getToken();
-    const payload = {
-      ...userData,
-      tags: userData.tags.split(',').map(t => t.trim()).filter(Boolean),
-    };
+  const payload: Record<string, unknown> = { ...userData };
+    if (userData.tags && typeof userData.tags === 'string') {
+      payload.tags = userData.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
     const response = await fetch(`${API_URL}/users/${id}`, {
       method: 'PUT',
       headers: {
