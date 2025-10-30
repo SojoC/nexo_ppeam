@@ -102,16 +102,33 @@ def run_smoke():
         # Provide a simple override that extracts the subject from our fake token
         # The real dependency accepts HTTPAuthorizationCredentials injected by
         # fastapi.security.HTTPBearer, so we keep the same signature.
-        from fastapi import HTTPException, status
+        from fastapi import HTTPException, status, Request
 
-        def fake_get_current_user(credentials=None):
-            # credentials is an instance with attribute 'credentials' containing the token
-            if credentials is None or not getattr(credentials, "credentials", None):
+        # Important: when overriding a dependency that originally used
+        # Depends(HTTPBearer), FastAPI will NOT execute the inner dependency
+        # automatically for the override. That means our override must extract
+        # the Authorization header itself from the Request.
+        def fake_get_current_user(request: Request):
+            auth = request.headers.get("authorization") or request.headers.get("Authorization")
+            if not auth:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-            token = credentials.credentials
+            # header typically: 'Bearer <token>'
+            if auth.startswith("Bearer "):
+                token = auth[len("Bearer ") :]
+            else:
+                token = auth
+
+            # If token was created by our fake service it's of form 'fake-token:<email>'
             if token.startswith("fake-token:"):
                 return token.split(":", 1)[1]
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+            # Otherwise attempt to decode with core.security.decode_access_token
+            try:
+                from core.security import decode_access_token
+                subject = decode_access_token(token)
+                return subject
+            except Exception:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
         app.dependency_overrides[core_security.get_current_user] = fake_get_current_user
     except Exception:
