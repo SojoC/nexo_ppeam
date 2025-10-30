@@ -13,39 +13,9 @@ export default function Navbar({ title = 'Nexo PPEAM' }: NavbarProps) {
   };
 
   return (
-    <nav style={styles.navbar}>
-      <h1 style={styles.title}>{title}</h1>
-      <button onClick={handleLogout} style={styles.logoutButton}>
-        Cerrar sesión
-      </button>
+    <nav className="bg-[#111827] flex justify-between items-center px-6 py-4 border-b border-[#1e293b] shadow">
+      <h1 className="text-2xl font-bold text-slate-200">{title}</h1>
+      <button onClick={handleLogout} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-sm font-medium text-white rounded-lg transition">Cerrar sesión</button>
     </nav>
   );
 }
-
-const styles: { [key: string]: React.CSSProperties } = {
-  navbar: {
-    backgroundColor: '#1e293b',
-    padding: '16px 32px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#f1f5f9',
-    margin: 0,
-  },
-  logoutButton: {
-    padding: '8px 20px',
-    fontSize: '14px',
-    fontWeight: '600',
-    borderRadius: '8px',
-    border: 'none',
-    backgroundColor: '#dc2626',
-    color: '#ffffff',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  },
-};
