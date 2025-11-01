@@ -2,13 +2,8 @@ import os
 import sys
 import pytest
 
-# Asegurar que los imports del backend funcionen cuando pytest corre desde la raíz
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
-
-# Cambiar cwd a backend para que pydantic cargue backend/.env en vez del .env del repo raíz
-os.chdir(ROOT)
+# Las modificaciones de sys.path y cwd ahora se realizan en
+# backend/tests/__init__.py para no alterar el comportamiento de las fixtures.
 
 from fastapi.testclient import TestClient
 from main_v2 import app
