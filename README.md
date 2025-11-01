@@ -1,4 +1,5 @@
 # Nexo PPEAM
+[![Backend Tests](https://github.com/SojoC/nexo_ppeam/actions/workflows/tests.yml/badge.svg)](https://github.com/SojoC/nexo_ppeam/actions/workflows/tests.yml)
 
 Aplicación de gestión de contactos y campañas de mensajería con FastAPI backend y React frontend.
 
