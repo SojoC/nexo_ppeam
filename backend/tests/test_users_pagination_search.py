@@ -8,7 +8,8 @@ def make_user(i: int):
         "nombre": f"User {i}",
         "telefono": f"700{i:03d}",
         "ciudad": "CTest",
-        "congregacion": "GTest",
+        # Usar congregacion única para aislar los tests de otros usuarios creados
+        "congregacion": "GTestPagination",
         "privilegio": "Publicador",
         "email": f"user{i}@example.com",
     }
@@ -24,8 +25,9 @@ def test_users_pagination_returns_correct_pages(client: TestClient):
         created = r.json()
         created_ids.append(created.get("id"))
 
-    # Page 1, per_page 5
-    r = client.get("/api/v2/users", params={"per_page": 5, "page": 1})
+    # Page 1, per_page 5 (filtrando por congregacion para aislar los usuarios creados)
+    params = {"per_page": 5, "page": 1, "congregacion": "GTestPagination"}
+    r = client.get("/api/v2/users", params=params)
     assert r.status_code == 200
     body = r.json()
     assert body.get("per_page") == 5
@@ -36,7 +38,8 @@ def test_users_pagination_returns_correct_pages(client: TestClient):
     assert len(users_page1) == 5
 
     # Page 2
-    r = client.get("/api/v2/users", params={"per_page": 5, "page": 2})
+    params["page"] = 2
+    r = client.get("/api/v2/users", params=params)
     assert r.status_code == 200
     body2 = r.json()
     users_page2 = body2.get("users")
@@ -44,7 +47,8 @@ def test_users_pagination_returns_correct_pages(client: TestClient):
     assert len(users_page2) == 5
 
     # Page 3 should contain the remainder (2)
-    r = client.get("/api/v2/users", params={"per_page": 5, "page": 3})
+    params["page"] = 3
+    r = client.get("/api/v2/users", params=params)
     assert r.status_code == 200
     body3 = r.json()
     users_page3 = body3.get("users")
