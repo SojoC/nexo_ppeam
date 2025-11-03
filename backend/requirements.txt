@@ -10,3 +10,4 @@ python-jose[cryptography]
 python-multipart
 packaging
 email-validator
+pydantic-settings>=2.0
