@@ -1,6 +1,9 @@
 # Python
 __pycache__/
 *.py[cod]
+# Python
+__pycache__/
+*.py[cod]
 *.pyo
 *.pyd
 *.pyc
@@ -41,3 +44,6 @@ htmlcov/
 node_modules/
 
 keys/
+
+# Ignorar el CSS compilado por el script de Tailwind
+frontend/src/.tailwind-output.css
