@@ -30,6 +30,17 @@ body {
   min-height: 100vh;
 }
 
+/* Disable stylelint at-rule-no-unknown for Tailwind's build-time directives.
+  These at-rules are processed by Tailwind/PostCSS during the build, and
+  some linters (stylelint) report them as unknown. This comment scope
+  silences that specific warning without changing runtime behaviour. */
+/* stylelint-disable at-rule-no-unknown */
+/* Tailwind base/components/utilities - required for build-time processing */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
+
 input:focus,
 button:focus {
   outline: 2px solid #2563eb;

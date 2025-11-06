@@ -333,7 +333,7 @@ def query_collection(
         
         results = []
         for doc in docs:
-            data = doc.to_dict()
+            data = doc.to_dict() or {}
             data['id'] = doc.id  # Incluir el ID del documento
             results.append(data)
             
@@ -364,7 +364,7 @@ def check_database_health() -> Dict[str, Any]:
         test_ref = conn.collection("_health_check").document("test")
         
         # Escribir y leer un documento de prueba
-        test_data = {"timestamp": firestore.SERVER_TIMESTAMP, "status": "healthy"}
+        test_data = {"timestamp": firestore.SERVER_TIMESTAMP, "status": "healthy"}  # type: ignore[attr-defined]
         test_ref.set(test_data)
         
         # Verificar que se puede leer
@@ -376,7 +376,7 @@ def check_database_health() -> Dict[str, Any]:
         return {
             "connected": True,
             "message": "Firestore connection healthy",
-            "timestamp": doc.to_dict().get("timestamp") if doc.exists else None
+            "timestamp": (doc.to_dict() or {}).get("timestamp") if doc.exists else None
         }
         
     except Exception as e:

@@ -86,8 +86,8 @@ def create_user(body: UserIn):
     user_data = {
         **body.model_dump(),  # todos los campos del modelo
         "email": body.email.lower() if body.email else None,  # normalizar email
-        "created_at": firestore.SERVER_TIMESTAMP,  # timestamp del servidor
-        "updated_at": firestore.SERVER_TIMESTAMP
+        "created_at": firestore.SERVER_TIMESTAMP,  # type: ignore[attr-defined]
+        "updated_at": firestore.SERVER_TIMESTAMP  # type: ignore[attr-defined]
     }
     
     # Guardar en Firestore
@@ -116,7 +116,7 @@ def list_users(
         query = query.where("congregacion", "==", congregacion)
     
     # Ordenar por fecha de creación y aplicar límite
-    query = query.order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit)
+    query = query.order_by("created_at", direction=firestore.Query.DESCENDING).limit(limit)  # type: ignore[attr-defined]
     
     # Ejecutar query
     docs = query.get()
@@ -124,10 +124,14 @@ def list_users(
     # Convertir documentos a modelos
     users = []
     for doc in docs:
-        data = doc.to_dict()
+        data = doc.to_dict() or {}
         # Extraer solo los campos que pertenecen al modelo UserIn
-        user_data = {k: data.get(k) for k in UserIn.model_fields.keys()}
-        users.append(UserOut(id=doc.id, **user_data))
+        # Asegurar que 'nombre' (requerido) no sea None para evitar errores de tipo
+        user_data = {
+            k: (data.get(k) if not (k == "nombre" and data.get(k) is None) else "")
+            for k in UserIn.model_fields.keys()
+        }
+    users.append(UserOut(id=doc.id, **user_data))  # type: ignore[arg-type]
     
     return users
 
@@ -145,10 +149,10 @@ def get_user(user_id: str):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
     # Extraer datos del documento
-    data = doc.to_dict()
-    user_data = {k: data.get(k) for k in UserIn.model_fields.keys()}
+    data = doc.to_dict() or {}
+    user_data = {k: (data.get(k) if not (k == "nombre" and data.get(k) is None) else "") for k in UserIn.model_fields.keys()}
     
-    return UserOut(id=doc.id, **user_data)
+    return UserOut(id=doc.id, **user_data)  # type: ignore[arg-type]
 
 @router.put("/users/{user_id}", response_model=UserOut)
 def update_user(user_id: str, body: UserIn):
@@ -181,7 +185,7 @@ def update_user(user_id: str, body: UserIn):
     update_data = {
         **body.model_dump(),
         "email": body.email.lower() if body.email else None,
-        "updated_at": firestore.SERVER_TIMESTAMP
+        "updated_at": firestore.SERVER_TIMESTAMP  # type: ignore[attr-defined]
     }
     
     # Actualizar documento
@@ -189,10 +193,10 @@ def update_user(user_id: str, body: UserIn):
     
     # Obtener documento actualizado para retornar
     updated_doc = doc_ref.get()
-    data = updated_doc.to_dict()
-    user_data = {k: data.get(k) for k in UserIn.model_fields.keys()}
+    data = updated_doc.to_dict() or {}
+    user_data = {k: (data.get(k) if not (k == "nombre" and data.get(k) is None) else "") for k in UserIn.model_fields.keys()}
     
-    return UserOut(id=user_id, **user_data)
+    return UserOut(id=user_id, **user_data)  # type: ignore[arg-type]
 
 @router.delete("/users/{user_id}")
 def delete_user(user_id: str):
@@ -228,10 +232,10 @@ def get_user_by_phone(phone: str):
         raise HTTPException(status_code=404, detail="No se encontró usuario con ese teléfono")
     
     doc = query[0]
-    data = doc.to_dict()
-    user_data = {k: data.get(k) for k in UserIn.model_fields.keys()}
+    data = doc.to_dict() or {}
+    user_data = {k: (data.get(k) if not (k == "nombre" and data.get(k) is None) else "") for k in UserIn.model_fields.keys()}
     
-    return UserOut(id=doc.id, **user_data)
+    return UserOut(id=doc.id, **user_data)  # type: ignore[arg-type]
 
 @router.get("/users/stats/congregaciones")
 def get_congregacion_stats():
@@ -245,7 +249,7 @@ def get_congregacion_stats():
     # Contar por congregación
     stats = {}
     for doc in users:
-        data = doc.to_dict()
+        data = doc.to_dict() or {}
         congregacion = data.get("congregacion", "Sin congregación")
         stats[congregacion] = stats.get(congregacion, 0) + 1
     

@@ -119,7 +119,7 @@ def register_user(body: RegisterRequest):
         "provider": "password",             # registro local
         "role": "user",                     # por defecto usuario
         "active": True,                     # habilitado
-        "created_at": firestore.SERVER_TIMESTAMP,
+        "created_at": firestore.SERVER_TIMESTAMP,  # type: ignore[attr-defined]
     }
 
     # 4) Guardar en Firestore con ID = email
@@ -142,7 +142,7 @@ def login_user(body: LoginRequest):
     if not doc.exists:
         raise HTTPException(status_code=401, detail="Credenciales inválidas.")
 
-    data = doc.to_dict()
+    data = doc.to_dict() or {}
     # Si el usuario se registró con OAuth, no tendrá password_hash
     if "password_hash" not in data:
         raise HTTPException(status_code=400, detail="El usuario usa proveedor externo (Google/Facebook).")
@@ -183,7 +183,7 @@ def sms_request_code(body: SmsRequest):
         "phone": body.phone,
         "code": "123456",                         # MOCK
         "expire_at": datetime.utcnow() + timedelta(minutes=5),
-        "created_at": firestore.SERVER_TIMESTAMP,
+        "created_at": firestore.SERVER_TIMESTAMP,  # type: ignore[attr-defined]
     })
     return {"status": "ok", "message": "Código OTP enviado (mock: 123456)"}
 
@@ -200,7 +200,7 @@ def sms_verify_code(body: SmsVerifyRequest):
     if not doc.exists:
         raise HTTPException(status_code=400, detail="No hay OTP pendiente para este teléfono.")
 
-    data = doc.to_dict()
+    data = doc.to_dict() or {}
     # Validación simple del código (mock)
     if body.code != data.get("code"):
         raise HTTPException(status_code=400, detail="Código inválido.")

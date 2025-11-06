@@ -1,3 +1,4 @@
+from typing import Optional
 from core.exceptions import NotFoundError, ConflictError, AuthenticationError
 
 
@@ -7,7 +8,7 @@ class FakeAuthService:
     def __init__(self):
         self.users = {}
 
-    async def register_user(self, email: str, password: str, display_name: str = None):
+    async def register_user(self, email: str, password: str, display_name: Optional[str] = None):
         email = email.lower()
         if email in self.users:
             raise ConflictError(f"Email {email} ya existe")
@@ -69,7 +70,7 @@ class FakeUserService:
         # store by id
         self.users = {}
 
-    async def create_user(self, user_data: dict, created_by: str = None):
+    async def create_user(self, user_data: dict, created_by: Optional[str] = None):
         # Use email as id if present, otherwise generate
         email = (user_data.get("email") or "").lower()
         # Verificar conflicto por email o teléfono
@@ -130,7 +131,7 @@ class FakeUserService:
             raise NotFoundError("Usuario")
         return u
 
-    async def update_user(self, user_id: str, update_data: dict, updated_by: str = None):
+    async def update_user(self, user_id: str, update_data: dict, updated_by: Optional[str] = None):
         u = self.users.get(user_id)
         if not u:
             raise NotFoundError("Usuario")

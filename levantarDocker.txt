@@ -11,3 +11,6 @@ docker compose ps
 # Logs por si algo falla
 docker compose logs --no-log-prefix --tail=100 frontend
 docker compose logs --no-log-prefix --tail=100 api
+
+actuvar el entorno
+.\.venv\Scripts\Activate.ps1
