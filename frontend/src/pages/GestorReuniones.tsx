@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import dayjs from 'dayjs';
 
 type Location = {
@@ -22,7 +22,7 @@ type Assigned = {
   name: string;
 };
 
-type DayEntry = {
+  type DayEntry = {
   date: string;
   day: string;
   locations: Array<{
@@ -30,7 +30,7 @@ type DayEntry = {
     name: string;
     max: number;
     assigned: Assigned[];
-    pairs: Array<[Assigned, Assigned] | Assigned[]>;
+    pairs: Array<[Assigned, Assigned]>;
   }>;
 };
 
@@ -79,13 +79,13 @@ function GestorReuniones() {
       loc.assigned.push(newPerson);
       // if reached capacity and max is even, form pairs
       if (loc.assigned.length === loc.max) {
-        const pairs: Array<[Assigned, Assigned]> = [];
+        const pairsArr: Array<[Assigned, Assigned]> = [];
         for (let i = 0; i < loc.assigned.length; i += 2) {
           const a = loc.assigned[i];
-          const b = loc.assigned[i+1] ?? { id: `dummy-${i}`, name: 'Sin pareja' } as Assigned;
-          pairs.push([a, b]);
+          const b = (loc.assigned[i+1]) ?? { id: `dummy-${i}`, name: 'Sin pareja' } as Assigned;
+          pairsArr.push([a, b]);
         }
-        loc.pairs = pairs;
+        loc.pairs = pairsArr;
       }
       return copy;
     });
@@ -95,7 +95,7 @@ function GestorReuniones() {
     <div className="p-6 max-w-6xl mx-auto bg-slate-900 text-white min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-center">Gestor de Reuniones Semanales</h1>
 
-      <div className="bg-slate-800 p-4 rounded shadow mb-6">
+        <div className="bg-slate-800 p-4 rounded shadow mb-6">
         <h2 className="text-2xl mb-2">Crear Semana de Actividades</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
@@ -109,15 +109,15 @@ function GestorReuniones() {
         </div>
 
         <h3 className="text-xl font-semibold mb-2">Seleccionar Ubicaciones</h3>
-        <div className="grid md:grid-cols-2 gap-3">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
           {locations.map(loc => (
-            <label key={loc.id} className="border p-3 rounded shadow bg-slate-800 text-white flex items-start gap-3">
+              <div key={loc.id} className="border border-slate-700 p-3 rounded shadow-sm bg-slate-800 flex items-center gap-3">
               <input type="checkbox" checked={selectedLocations.includes(loc.id)} onChange={() => toggleLocation(loc.id)} />
               <div>
                 <div className="font-semibold">{loc.name}</div>
                 <div className="text-sm text-slate-400">Máx. {loc.max} participantes</div>
               </div>
-            </label>
+              </div>
           ))}
         </div>
 
@@ -130,10 +130,10 @@ function GestorReuniones() {
         <h2 className="text-xl mb-2">Vista Preliminar (Interactiva)</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {schedule.map((day, di) => (
-            <div key={day.date} className="p-3 bg-slate-700 rounded">
-              <div className="flex justify-between items-center mb-2">
+            <div key={day.date} className="p-3 bg-slate-700 rounded border border-slate-700">
+              <div className="flex justify-between items-center mb-3">
                 <div>
-                  <div className="font-semibold">{day.day}</div>
+                  <div className="font-semibold text-lg">{day.day}</div>
                   <div className="text-sm text-slate-400">{day.date}</div>
                 </div>
                 <div className="text-sm text-slate-400">{day.locations.length} ubicaciones</div>
@@ -143,38 +143,33 @@ function GestorReuniones() {
                 <div className="text-sm text-slate-400">No hay ubicaciones seleccionadas para este día</div>
               )}
 
-              <div className="grid gap-2">
+              <div className="grid gap-3">
                 {day.locations.map(loc => (
-                  <div key={loc.id} className="p-2 bg-slate-800 rounded border">
-                    <div className="flex justify-between items-center">
-                      <div>
+                  <div key={loc.id} className="p-3 bg-slate-800 rounded border border-slate-700">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1">
                         <div className="font-semibold">{loc.name}</div>
                         <div className="text-sm text-slate-400">{loc.assigned.length} de {loc.max} participantes</div>
+                        {loc.assigned.length > 0 && (
+                          <ul className="list-disc ml-5 mt-2 text-sm">
+                            {loc.assigned.map(a => <li key={a.id}>{a.name}</li>)}
+                          </ul>
+                        )}
+                        {loc.pairs && loc.pairs.length > 0 && (
+                          <div className="mt-2 text-sm">
+                            <div className="font-medium">Parejas asignadas:</div>
+                            <ul className="list-decimal ml-5">
+                              {loc.pairs.map((p: [Assigned, Assigned], idx: number) => (
+                                <li key={idx}>{p[0]?.name} + {p[1]?.name}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex gap-2">
-                        <button className="px-2 py-1 bg-green-600 rounded text-sm" onClick={() => addMockParticipant(di, loc.id)}>Agregar participante (demo)</button>
+                      <div className="flex-shrink-0">
+                        <button className="px-3 py-1 bg-green-600 rounded text-sm" onClick={() => addMockParticipant(di, loc.id)}>Agregar</button>
                       </div>
                     </div>
-
-                    {loc.assigned.length > 0 && (
-                      <div className="mt-2 text-sm">
-                        <div className="font-medium">Asistentes:</div>
-                        <ul className="list-disc ml-5">
-                          {loc.assigned.map(a => <li key={a.id}>{a.name}</li>)}
-                        </ul>
-                      </div>
-                    )}
-
-                    {loc.pairs && loc.pairs.length > 0 && (
-                      <div className="mt-2 text-sm">
-                        <div className="font-medium">Parejas asignadas:</div>
-                        <ul className="list-decimal ml-5">
-                          {loc.pairs.map((p: any, idx: number) => (
-                            <li key={idx}>{Array.isArray(p) ? `${p[0]?.name} + ${p[1]?.name}` : JSON.stringify(p)}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
