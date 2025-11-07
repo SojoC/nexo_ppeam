@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-  "build:css": "node scripts/build-css.cjs",
-  "build": "npm run build:css && tsc -b && vite build",
+    "build:css": "node scripts/build-css.cjs",
+    "build": "npm run build:css && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "axios": "^1.13.0",
+    "dayjs": "^1.11.19",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.65.0",
