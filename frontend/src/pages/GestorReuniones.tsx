@@ -11,13 +11,35 @@ const locations = [
   { id: "6", name: "TERMINAL", max: 6, days: [0, 1, 2, 3, 4, 5, 6] },
 ];
 
-type UserAny = Record<string, any>;
+type User = {
+  id?: string;
+  nombre?: string;
+  firstName?: string;
+  name?: string;
+  email?: string;
+  [key: string]: unknown;
+};
+
+type DayLocation = {
+  id: string;
+  name: string;
+  max: number;
+  participantes: User[];
+  pairs: User[][];
+  [key: string]: unknown;
+};
+
+type DayEntry = {
+  date: string;
+  day: string;
+  locations: DayLocation[];
+};
 
 export default function GestorReuniones() {
   const [startDate, setStartDate] = useState(dayjs().startOf("week").add(1, "day"));
   const [endDate, setEndDate] = useState(dayjs().startOf("week").add(7, "day"));
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [usuarios, setUsuarios] = useState<UserAny[]>([]);
+  const [usuarios, setUsuarios] = useState<User[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -34,10 +56,10 @@ export default function GestorReuniones() {
     setSelectedLocations(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
   };
 
-  const displayName = (u: UserAny) => u?.nombre || u?.firstName || u?.name || u?.email || 'Usuario';
+  const displayName = (u: User) => u?.nombre || u?.firstName || u?.name || u?.email || 'Usuario';
 
-  const generateWeekSchedule = () => {
-    const days: any[] = [];
+  const generateWeekSchedule = (): DayEntry[] => {
+    const days: DayEntry[] = [];
     for (let i = 0; i < 7; i++) {
       const date = dayjs(startDate).add(i, "day");
       const weekday = date.day();
@@ -46,13 +68,13 @@ export default function GestorReuniones() {
         day: date.format("dddd"),
         locations: locations
           .filter(loc => selectedLocations.includes(loc.id) && loc.days.includes(weekday))
-          .map(loc => {
-            const participantes = usuarios.slice(0, loc.max);
-            const pairs: any[] = [];
+          .map((loc): DayLocation => {
+            const participantes = usuarios.slice(0, loc.max) as User[];
+            const pairs: User[][] = [];
             for (let j = 0; j < participantes.length; j += 2) {
               pairs.push(participantes.slice(j, j + 2));
             }
-            return { ...loc, participantes, pairs };
+            return { ...loc, participantes, pairs } as DayLocation;
           }),
       };
       days.push(dayEntry);
@@ -100,12 +122,12 @@ export default function GestorReuniones() {
           <div key={dia.date} className="mb-4">
             <h3 className="text-lg font-semibold text-blue-300">{dia.day} – {dia.date}</h3>
             <div className="grid md:grid-cols-2 gap-3">
-              {dia.locations.map((loc: any) => (
+              {dia.locations.map((loc: DayLocation) => (
                 <div key={loc.id} className="bg-slate-700 p-3 rounded">
                   <h4 className="font-bold">{loc.name}</h4>
-                  {loc.pairs.map((pair: any[], i: number) => (
+                  {loc.pairs.map((pair: User[], i: number) => (
                     <div key={i} className="text-sm bg-slate-900 p-2 my-1 rounded">
-                      Pareja {i + 1}: {pair.map(p => displayName(p)).join(" & ")}
+                      Pareja {i + 1}: {pair.map(p => displayName(p as User)).join(" & ")}
                     </div>
                   ))}
                   {loc.participantes.length === 0 && <p className="text-sm italic text-gray-400">Sin asignados</p>}
