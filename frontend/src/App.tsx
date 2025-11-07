@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import UsersPage from './pages/UsersPage';
 import UserRegister from './pages/UserRegister';
+import GestorReuniones from './pages/GestorReuniones';
 import { LoginPage as NewLoginPage } from './components/LoginPage';
 import { Button } from './components/ui';
 
@@ -21,6 +22,9 @@ function Navigation() {
             <Link to="/register" className="hover:text-indigo-400 transition-colors">
               Registro de Usuarios
             </Link>
+              <Link to="/gestor" className="hover:text-indigo-400 transition-colors">
+                Gestor de Reuniones
+              </Link>
             <Link to="/users" className="hover:text-indigo-400 transition-colors">
               Gestión CRUD
             </Link>
@@ -220,6 +224,7 @@ function AppContent() {
           path="/register"
           element={<UserRegister />}
         />
+        <Route path="/gestor" element={<GestorReuniones />} />
         
         {/* Página de inicio mejorada */}
         <Route path="/" element={<HomePage />} />
