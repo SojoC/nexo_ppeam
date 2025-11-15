@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
-import dayjs from "dayjs";
+import { useEffect, useMemo, useState } from "react";
+import dayjs, { Dayjs } from "dayjs";
+import "dayjs/locale/es";
 import { usersAPI } from "../services/api";
 
+dayjs.locale("es");
+
+// Lugares disponibles (puedes editar estos nombres / tamaños)
 const locations = [
-  { id: "1", name: "PARQUE LA GUARICHA", max: 8, days: [6, 0] },
+  { id: "1", name: "PARQUE LA GUARICHA", max: 8, days: [6, 0] }, // sáb / dom
   { id: "2", name: "PLAZA AYACUCHO", max: 6, days: [0, 1, 2, 3, 4, 5, 6] },
   { id: "3", name: "PLAZA BALANCÍN", max: 6, days: [0, 1, 2, 3, 4, 5, 6] },
   { id: "4", name: "PLAZA ESTUDIANTE", max: 6, days: [0, 1, 2, 3, 4, 5, 6] },
@@ -14,174 +18,481 @@ const locations = [
 type User = {
   id?: string;
   nombre?: string;
-  firstName?: string;
-  name?: string;
-  email?: string;
-  [key: string]: unknown;
+  apellido?: string;
+  telefono?: string;
+  congregacion?: string;
 };
 
-type DayLocation = {
-  id: string;
-  name: string;
-  max: number;
-  participantes: User[];
-  pairs: User[][];
-  [key: string]: unknown;
+// Cada fila de la carta tipo imagen 1
+type SlotRow = {
+  time: string;
+  pub1?: User;
+  pub2?: User;
 };
 
-type DayEntry = {
-  date: string;
-  day: string;
-  locations: DayLocation[];
+// Configuración editable por día (lugar, contacto, nota)
+type DayConfig = {
+  place: string;
+  contact: string;
+  note: string;
+  locationId: string; // qué lugar se está usando ese día
+  customTimes?: string[]; // horarios personalizados para la carta de ese día
 };
+
+// ==========================
+// Helpers
+// ==========================
+
+// Construye la matriz de semanas para el calendario mensual
+function buildMonthMatrix(base: Dayjs): Dayjs[][] {
+  const startOfMonth = base.startOf("month");
+  const endOfMonth = base.endOf("month");
+
+  const start = startOfMonth.startOf("week"); // según locale (es → lunes)
+  const end = endOfMonth.endOf("week");
+
+  const weeks: Dayjs[][] = [];
+  let cursor = start;
+
+  while (cursor.isBefore(end) || cursor.isSame(end, "day")) {
+    const weekIndex = weeks.length - 1;
+    if (weeks.length === 0 || weeks[weekIndex].length === 7) {
+      weeks.push([]);
+    }
+    weeks[weeks.length - 1].push(cursor);
+    cursor = cursor.add(1, "day");
+  }
+  return weeks;
+}
+
+// Time slots por defecto que se verán en la tabla (puedes ajustarlos a tu diseño)
+const TIME_SLOTS = [
+  "8:55 AM",
+  "9:20 AM",
+  "9:45 AM",
+  "10:10 AM",
+  "10:35 AM",
+  "11:00 AM",
+];
+
+// Genera filas Pub1 / Pub2 para un lugar concreto
+function buildSlots(usuarios: User[], max: number, times: string[] = TIME_SLOTS): SlotRow[] {
+  const participantes = usuarios.slice(0, max); // aquí luego podemos meter lógica avanzada
+  const rows: SlotRow[] = [];
+
+  for (let i = 0; i < participantes.length && i / 2 < times.length; i += 2) {
+    const slotIndex = i / 2;
+    rows.push({
+      time: times[slotIndex],
+      pub1: participantes[i],
+      pub2: participantes[i + 1],
+    });
+  }
+
+  // Si quieres forzar siempre todas las horas, aun sin gente:
+  while (rows.length < times.length) {
+    rows.push({
+      time: times[rows.length],
+    });
+  }
+
+  return rows;
+}
+
+// ==========================
+// Componente principal
+// ==========================
 
 export default function GestorReuniones() {
-  const [startDate, setStartDate] = useState(dayjs().startOf("week").add(1, "day"));
-  const [endDate, setEndDate] = useState(dayjs().startOf("week").add(7, "day"));
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [usuarios, setUsuarios] = useState<User[]>([]);
+  const [currentMonth, setCurrentMonth] = useState<Dayjs>(() => dayjs());
+  const [selectedDate, setSelectedDate] = useState<Dayjs>(() => dayjs());
+  const [dayConfigs, setDayConfigs] = useState<Record<string, DayConfig>>({});
 
+  // Lugar seleccionado en el selector (arriba de la carta)
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("1");
+
+  // Cargar usuarios desde el backend (como ya hacías)
   useEffect(() => {
     let mounted = true;
-    usersAPI.getAll()
-      .then(data => {
+    usersAPI
+      .getAll()
+      .then((data) => {
         if (!mounted) return;
         setUsuarios(Array.isArray(data) ? data : []);
       })
       .catch(() => setUsuarios([]));
-    return () => { mounted = false };
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const toggleLocation = (id: string) => {
-    setSelectedLocations(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
-  };
+  // Matriz de semanas para el calendario mensual
+  const monthMatrix = useMemo(
+    () => buildMonthMatrix(currentMonth),
+    [currentMonth]
+  );
 
-  const displayName = (u: User) => u?.nombre || u?.firstName || u?.name || u?.email || 'Usuario';
+  // Lugar elegido para el calendario (selector superior)
+  const calendarSelectedLocation =
+    locations.find((l) => l.id === selectedLocationId) || locations[0];
 
-  const generateWeekSchedule = (): DayEntry[] => {
-    const days: DayEntry[] = [];
-    for (let i = 0; i < 7; i++) {
-      const date = dayjs(startDate).add(i, "day");
-      const weekday = date.day();
-      const dayEntry = {
-        date: date.format("YYYY-MM-DD"),
-        day: date.format("dddd"),
-        locations: locations
-          .filter(loc => selectedLocations.includes(loc.id) && loc.days.includes(weekday))
-          .map((loc): DayLocation => {
-            const participantes = usuarios.slice(0, loc.max) as User[];
-            const pairs: User[][] = [];
-            for (let j = 0; j < participantes.length; j += 2) {
-              pairs.push(participantes.slice(j, j + 2));
-            }
-            return { ...loc, participantes, pairs } as DayLocation;
-          }),
+  // clave única por día: YYYY-MM-DD
+  const selectedKey = selectedDate.format("YYYY-MM-DD");
+
+  // Configuración guardada (en memoria) para el día actual
+  const currentDayConfig: DayConfig =
+    dayConfigs[selectedKey] || {
+      place: "",
+      contact: "",
+      note: "",
+      locationId: selectedLocationId,
+    };
+
+  // Lugar elegido para la carta
+  const selectedLocation =
+    locations.find((l) => l.id === currentDayConfig.locationId) ||
+    locations[0];
+
+  // Filas de la tabla para ese lugar
+  const slotRows = useMemo(
+    () => buildSlots(usuarios, selectedLocation.max, currentDayConfig.customTimes || TIME_SLOTS),
+    [usuarios, selectedLocation.max]
+  );
+
+  const handleTimeChange = (index: number, value: string) => {
+    setDayConfigs((prev) => {
+      const prevCfg = prev[selectedKey] || { ...currentDayConfig };
+      const times = (prevCfg.customTimes || TIME_SLOTS).slice();
+      times[index] = value;
+      return {
+        ...prev,
+        [selectedKey]: {
+          ...prevCfg,
+          customTimes: times,
+        },
       };
-      days.push(dayEntry);
-    }
-    return days;
+    });
   };
 
-  const badgeColors = [
-    'bg-rose-400/80',
-    'bg-amber-300/80',
-    'bg-cyan-400/80',
-    'bg-violet-400/80',
-    'bg-lime-400/80',
-  ];
+  const handleConfigChange = (field: keyof DayConfig, value: string) => {
+    setDayConfigs((prev) => ({
+      ...prev,
+      [selectedKey]: {
+        ...currentDayConfig,
+        [field]: value,
+      },
+    }));
+  };
 
-  const getBadgeColor = (i: number) => badgeColors[i % badgeColors.length];
+  const handleLocationChange = (value: string) => {
+    setSelectedLocationId(value);
+    setDayConfigs((prev) => ({
+      ...prev,
+      [selectedKey]: {
+        ...currentDayConfig,
+        locationId: value,
+      },
+    }));
+  };
+
+  // ========================== RENDER ==========================
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-4xl font-extrabold mb-6 text-center">Gestor de Reuniones Semanales</h1>
+    <div className="min-h-screen bg-[#050816] text-slate-100 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Encabezado */}
+        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-1 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              Gestor de Reuniones — Calendario
+            </h1>
+            <p className="text-slate-400">
+              Selecciona un día del calendario y edita la carta de programación
+              para ese día (lugar, parejas, nota, contacto).
+            </p>
+          </div>
+        </header>
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: controls */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* ==================== COLUMNA IZQUIERDA: CALENDARIO ==================== */}
           <div className="lg:col-span-1">
-            <div className="bg-slate-800 p-6 rounded-2xl shadow border border-slate-700">
-              <h2 className="text-2xl font-semibold mb-4">Crear Semana de Actividades</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Fecha Inicio (Lunes)</label>
-                  <input type="date" className="w-full text-black rounded-md p-2" value={startDate.format('YYYY-MM-DD')} onChange={e => setStartDate(dayjs(e.target.value))} />
+            <div className="bg-slate-900/80 border border-slate-700 rounded-2xl p-4 shadow-lg">
+              {/* Header del mes */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm"
+                  onClick={() =>
+                    setCurrentMonth((prev) => prev.subtract(1, "month"))
+                  }
+                >
+                  ← Anterior
+                </button>
+                {/* Selector global de lugar: elegir lugar antes del día */}
+                <div className="mx-4">
+                  <label className="text-xs text-slate-300 block">Lugar</label>
+                  <select
+                    value={selectedLocationId}
+                    onChange={(e) => setSelectedLocationId(e.target.value)}
+                    className="bg-slate-800 text-xs text-slate-100 rounded px-2 py-1 border border-slate-700"
+                  >
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Fecha Fin (Domingo)</label>
-                  <input type="date" className="w-full text-black rounded-md p-2" value={endDate.format('YYYY-MM-DD')} onChange={e => setEndDate(dayjs(e.target.value))} />
+                <div className="text-center">
+                  <div className="font-semibold">
+                    {currentMonth.format("MMMM YYYY").toUpperCase()}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Día seleccionado: {" "}
+                    <span className="font-medium text-indigo-300">
+                      {selectedDate.format("dddd D [de] MMMM")}
+                    </span>
+                  </div>
                 </div>
+                <button
+                  className="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm"
+                  onClick={() =>
+                    setCurrentMonth((prev) => prev.add(1, "month"))
+                  }
+                >
+                  Siguiente →
+                </button>
               </div>
 
-              <h3 className="text-lg font-semibold mb-3">Seleccionar Ubicaciones</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {locations.map(loc => {
-                  const active = selectedLocations.includes(loc.id);
-                  return (
-                    <button key={loc.id} onClick={() => toggleLocation(loc.id)} className={`text-left p-3 rounded-lg border transition-shadow flex items-start gap-3 ${active ? 'border-indigo-500 bg-slate-900 shadow-lg' : 'border-slate-700 bg-slate-800 hover:shadow-md'}`}>
-                      <input type="checkbox" checked={active} readOnly className="mt-1" />
-                      <div className="flex-1">
-                        <div className="font-medium">{loc.name}</div>
-                        <div className="text-sm text-slate-400">Máx. {loc.max} participantes</div>
-                      </div>
-                    </button>
-                  );
-                })}
+              {/* Cabecera de días de la semana */}
+              <div className="grid grid-cols-7 text-xs font-semibold text-center text-slate-400 mb-2">
+                {["L", "M", "X", "J", "V", "S", "D"].map((d) => (
+                  <div key={d} className="py-1">
+                    {d}
+                  </div>
+                ))}
               </div>
 
-              <div className="mt-4 flex gap-3">
-                <button className="px-4 py-2 bg-indigo-600 rounded-lg" onClick={() => { /* regenerate preview */ }}>{'Generar'}</button>
-                <button className="px-4 py-2 bg-slate-700 rounded-lg" onClick={() => { setSelectedLocations([]); }}>{'Limpiar'}</button>
+              {/* Celdas del calendario */}
+              <div className="grid grid-cols-7 gap-1 text-sm">
+                {monthMatrix.map((week, wIdx) =>
+                  week.map((date) => {
+                    const isCurrentMonth =
+                      date.month() === currentMonth.month();
+                    const isSelected = date.isSame(selectedDate, "day");
+                    const isToday = date.isSame(dayjs(), "day");
+                    const isWeekend = [0, 6].includes(date.day()); // dom / sáb
+
+                    const allowedForCalendar = calendarSelectedLocation.days.includes(
+                      date.day()
+                    );
+
+                    const classes = [
+                      "aspect-square rounded-lg flex items-center justify-center border text-xs transition",
+                      isSelected
+                        ? "bg-indigo-600 text-white border-indigo-400 shadow-lg"
+                        : isToday
+                        ? "border-indigo-500/70 text-indigo-300 bg-slate-800/80"
+                        : isCurrentMonth
+                        ? "border-slate-700 bg-slate-900 hover:bg-slate-800"
+                        : "border-slate-800 bg-slate-950/70 text-slate-500",
+                      isWeekend && !isSelected ? "font-semibold" : "",
+                    ];
+
+                    if (!allowedForCalendar && !isSelected) {
+                      classes.push("opacity-40 cursor-not-allowed");
+                    }
+
+                    return (
+                      <button
+                        key={date.format("YYYY-MM-DD") + wIdx}
+                        onClick={() => {
+                          if (!allowedForCalendar) return;
+                          setSelectedDate(date);
+                          // si no hay config para este día, prellenar con el lugar del selector
+                          const key = date.format("YYYY-MM-DD");
+                          setDayConfigs((prev) => {
+                            if (prev[key]) return prev;
+                            return {
+                              ...prev,
+                              [key]: {
+                                place: "",
+                                contact: "",
+                                note: "",
+                                locationId: selectedLocationId,
+                              },
+                            };
+                          });
+                        }}
+                        className={classes.join(" ")}
+                        title={
+                          allowedForCalendar
+                            ? undefined
+                            : `No disponible para ${calendarSelectedLocation.name}`
+                        }
+                      >
+                        {date.date()}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
 
-          {/* Center+Right: preview and matrix */}
+          {/* ==================== COLUMNA DERECHA: CARTA DEL DÍA ==================== */}
           <div className="lg:col-span-2">
-            <div className="bg-slate-800 p-6 rounded-2xl shadow border border-slate-700 mb-6">
-              <h2 className="text-2xl font-semibold mb-4">Vista Preliminar (Matriz Semanal)</h2>
-
-              <div className="space-y-6">
-                {generateWeekSchedule().map((dia) => (
-                  <article key={dia.date} className="bg-slate-700 rounded-xl p-4 border border-slate-700 shadow-sm">
-                    <div className="mb-3 flex items-start justify-between">
-                      <div>
-                        <div className="font-semibold">{dia.day}</div>
-                        <div className="text-sm text-slate-400">{dia.date}</div>
-                      </div>
-                      <div className="text-sm text-slate-400">{dia.locations.length} ubicaciones</div>
-                    </div>
-
-                    {dia.locations.length === 0 && <div className="text-sm text-slate-400">No hay ubicaciones seleccionadas para este día</div>}
-
-                    <div className="mt-3 space-y-3">
-                      {dia.locations.map((loc) => (
-                        <div key={loc.id} className="bg-slate-800 p-4 rounded-lg border border-slate-700">
-                          <div className="mb-2 flex items-center justify-between">
-                            <div className="font-medium">{loc.name}</div>
-                            <div className="text-sm text-slate-400">{loc.participantes.length} de {loc.max}</div>
-                          </div>
-
-                          {/* Pairs rendered as two-column schedule like image3 */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {loc.pairs.length === 0 && loc.participantes.length === 0 && (
-                              <div className="text-sm italic text-slate-400">Sin asignados</div>
-                            )}
-
-                            {loc.pairs.map((pair, pi) => (
-                              <div key={pi} className="flex gap-2">
-                                <div className={`${getBadgeColor(pi)} text-slate-900 flex-1 rounded p-2 text-sm font-medium`}>{displayName(pair[0] ?? ({} as User))}</div>
-                                <div className={`${getBadgeColor(pi+1)} text-slate-900 flex-1 rounded p-2 text-sm font-medium`}>{displayName(pair[1] ?? ({} as User))}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+            <div className="bg-slate-900/90 border border-slate-700 rounded-2xl p-6 shadow-lg space-y-6">
+              {/* Encabezado tipo carta */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm font-semibold text-center">
+                <div className="bg-indigo-700 text-white rounded-lg py-2">
+                  <div>DÍA</div>
+                  <div className="mt-1 capitalize">
+                    {selectedDate.format("dddd")}
+                  </div>
+                </div>
+                <div className="bg-indigo-700 text-white rounded-lg py-2">
+                  <div>FECHA</div>
+                  <div className="mt-1">
+                    {selectedDate.format("DD/MM/YYYY")}
+                  </div>
+                </div>
+                <div className="bg-indigo-700 text-white rounded-lg py-2">
+                  <div>LUGAR</div>
+                  <div className="mt-1">
+                    <select
+                      className="w-full bg-indigo-800 text-xs rounded border border-indigo-300 px-2 py-1"
+                      value={currentDayConfig.locationId}
+                      onChange={(e) => handleLocationChange(e.target.value)}
+                    >
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
                       ))}
-                    </div>
-                  </article>
-                ))}
+                    </select>
+                  </div>
+                </div>
               </div>
+
+              {/* Campo de texto para nombre libre del lugar (ej: GUARICHA TARDE) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className="md:col-span-3">
+                  <label className="block text-slate-300 mb-1">
+                    Nombre específico del lugar (ej: GUARICHA TARDE)
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm"
+                    value={currentDayConfig.place}
+                    onChange={(e) =>
+                      handleConfigChange("place", e.target.value)
+                    }
+                    placeholder="Ej. GUARICHA TARDE"
+                  />
+                </div>
+              </div>
+
+              {/* Tabla Pub1 / Inicio / Pub2 (como imagen 1) */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-slate-800 text-slate-100">
+                      <th className="border border-slate-700 px-2 py-1 w-1/3">
+                        Pub 1
+                      </th>
+                      <th className="border border-slate-700 px-2 py-1 w-1/3">
+                        Inicio
+                      </th>
+                      <th className="border border-slate-700 px-2 py-1 w-1/3">
+                        Pub 2
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {slotRows.map((slot, idx) => (
+                      <tr
+                        key={idx}
+                        className={
+                          idx % 2 === 0 ? "bg-slate-900" : "bg-slate-800/70"
+                        }
+                      >
+                        <td className="border border-slate-700 px-2 py-1">
+                          {slot.pub1
+                            ? `${slot.pub1.nombre ?? ""} ${
+                                slot.pub1.apellido ?? ""
+                              }`
+                            : "—"}
+                        </td>
+                        <td className="border border-slate-700 px-2 py-1 text-center">
+                          {slot.time}
+                        </td>
+                        <td className="border border-slate-700 px-2 py-1">
+                          {slot.pub2
+                            ? `${slot.pub2.nombre ?? ""} ${
+                                slot.pub2.apellido ?? ""
+                              }`
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Persona de contacto + nota (parte inferior de la carta) */}
+              {/* Editar horas (time slots) */}
+              <div className="mt-2 bg-slate-800/60 p-3 rounded-md">
+                <div className="text-xs text-slate-300 font-medium mb-2">Editar horas (modifica las horas para este día)</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {(currentDayConfig.customTimes || TIME_SLOTS).map((t, i) => (
+                    <input
+                      key={i}
+                      value={t}
+                      onChange={(e) => handleTimeChange(i, e.target.value)}
+                      className="w-full rounded bg-slate-900 border border-slate-700 px-2 py-1 text-sm"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className="md:col-span-2">
+                  <label className="block text-slate-300 mb-1">
+                    Persona de contacto
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm"
+                    value={currentDayConfig.contact}
+                    onChange={(e) =>
+                      handleConfigChange("contact", e.target.value)
+                    }
+                    placeholder="Ej. García, Dimas 0414-XXXXX"
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <label className="block text-slate-300 mb-1">
+                    Nota inferior
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-lg bg-slate-800 border border-slate-600 px-3 py-2 text-sm"
+                    value={currentDayConfig.note}
+                    onChange={(e) =>
+                      handleConfigChange("note", e.target.value)
+                    }
+                    placeholder="Ej. Confirme su participación"
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-400 italic">
+                * De momento esta configuración se mantiene sólo en memoria del
+                navegador. Para guardarla definitivamente habría que crear un
+                endpoint en el backend (podemos hacerlo en otro paso).
+              </p>
             </div>
           </div>
         </section>
